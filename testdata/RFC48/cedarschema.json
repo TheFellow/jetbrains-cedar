@@ -1,0 +1,108 @@
+{
+  "TinyTodo": {
+    "commonTypes": {
+      "Task": {
+        "type": "Record",
+        "attributes": {
+          "id": {
+            "type": "Long",
+            "annotations": {
+              "doc": "task id"
+            }
+          },
+          "name": {
+            "type": "String"
+          },
+          "state": {
+            "type": "String"
+          }
+        },
+        "annotations": {
+          "doc": "a common type representing a task"
+        }
+      },
+      "Tasks": {
+        "type": "Set",
+        "element": {
+          "type": "TinyTodo::Task"
+        },
+        "annotations": {
+          "doc": "a common type representing a set of tasks"
+        }
+      }
+    },
+    "entityTypes": {
+      "Application": {},
+      "List": {
+        "memberOfTypes": ["TinyTodo::Application"],
+        "shape": {
+          "type": "Record",
+          "attributes": {
+            "editors": {
+              "type": "Entity",
+              "name": "TinyTodo::Team",
+              "annotations": {
+                "doc": "editors of a list"
+              }
+            },
+            "name": {
+              "type": "String"
+            },
+            "owner": {
+              "type": "Entity",
+              "name": "TinyTodo::User"
+            },
+            "readers": {
+              "type": "Entity",
+              "name": "TinyTodo::Team",
+              "annotations": {
+                "doc": "readers of a list"
+              }
+            },
+            "tasks": {
+              "type": "TinyTodo::Tasks"
+            }
+          }
+        },
+        "annotations": {
+          "doc": "an entity type representing a list",
+          "docComment": "any entity type is a child of type `Application`"
+        }
+      },
+      "Team": {},
+      "User": {}
+    },
+    "actions": {
+      "DeleteList": {
+        "appliesTo": {
+          "resourceTypes": ["TinyTodo::List"],
+          "principalTypes": ["TinyTodo::User"]
+        },
+        "annotations": {
+          "doc": "actions that a user can operate on a list"
+        }
+      },
+      "GetList": {
+        "appliesTo": {
+          "resourceTypes": ["TinyTodo::List"],
+          "principalTypes": ["TinyTodo::User"]
+        },
+        "annotations": {
+          "doc": "actions that a user can operate on a list"
+        }
+      },
+      "UpdateList": {
+        "appliesTo": {
+          "resourceTypes": ["TinyTodo::List"],
+          "principalTypes": ["TinyTodo::User"]
+        },
+        "annotations": {
+          "doc": "actions that a user can operate on a list"
+        }
+      }
+    },
+    "annotations": {
+      "doc": "this is the namespace"
+    }
+  }
+}

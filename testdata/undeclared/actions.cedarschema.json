@@ -1,0 +1,12 @@
+{
+  "": {
+    "entityTypes": {
+      "Test": {}
+    },
+    "actions": {
+      "doTests": {
+        "memberOf": [{ "id": "test1" }, { "type": "Action", "id": "test2" }]
+      }
+    }
+  }
+}

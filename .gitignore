@@ -1,0 +1,12 @@
+.gradle/
+build/
+.intellijPlatform/
+.kotlin/
+cedar-wasm/target/
+out/
+.idea/
+*.iml
+.DS_Store
+# semport scratch and upstream checkout
+.ai/
+inspiration/

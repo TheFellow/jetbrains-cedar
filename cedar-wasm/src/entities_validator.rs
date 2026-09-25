@@ -1,0 +1,129 @@
+// Copyright Cedar Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+use cedar_policy::{Entities, Schema};
+use miette::Diagnostic;
+use serde::{Deserialize, Serialize};
+
+use crate::validate_message::ValidateMessage;
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ValidateEntitiesResult {
+    pub success: bool,
+    errors: Option<Vec<ValidateMessage>>,
+}
+
+fn create_error_result(e: impl std::fmt::Display) -> ValidateEntitiesResult {
+    ValidateEntitiesResult {
+        success: false,
+        errors: Some(vec![ValidateMessage {
+            message: e.to_string(),
+            offset: 0,
+            length: 0,
+        }]),
+    }
+}
+pub fn validate_entities_schema_json(
+    input_schema_str: &str,
+    input_entities_str: &str,
+) -> ValidateEntitiesResult {
+    let schema = match Schema::from_json_str(&input_schema_str) {
+        Ok(schema) => Some(schema),
+        Err(e) => {
+            return create_error_result(e);
+        }
+    };
+    let result = match Entities::from_json_str(input_entities_str, schema.as_ref()) {
+        Ok(_entities) => ValidateEntitiesResult {
+            success: true,
+            errors: None,
+        },
+        Err(e) => {
+            let diagnostic: &dyn Diagnostic = &e;
+            let validate_errs = match diagnostic.source() {
+                Some(source) => vec![ValidateMessage {
+                    message: String::from(&format!("{}: {}", e, source)),
+                    offset: 0,
+                    length: 0,
+                }],
+                None => vec![ValidateMessage {
+                    message: String::from(&format!("{e}")),
+                    offset: 0,
+                    length: 0,
+                }],
+            };
+            ValidateEntitiesResult {
+                success: false,
+                errors: Some(validate_errs),
+            }
+        }
+    };
+    result
+}
+pub fn validate_entities_schema_cedar(
+    input_schema_str: &str,
+    input_entities_str: &str,
+) -> ValidateEntitiesResult {
+    let schema = match Schema::from_cedarschema_str(&input_schema_str) {
+        Ok(schema) => Some(schema),
+        Err(e) => {
+            return create_error_result(e);
+        }
+    };
+    let result = match Entities::from_json_str(input_entities_str, Some(&schema.unwrap().0)) {
+        Ok(_entities) => ValidateEntitiesResult {
+            success: true,
+            errors: None,
+        },
+        Err(e) => {
+            let diagnostic: &dyn Diagnostic = &e;
+            let validate_errs = match diagnostic.source() {
+                Some(source) => vec![ValidateMessage {
+                    message: String::from(&format!("{}: {}", e, source)),
+                    offset: 0,
+                    length: 0,
+                }],
+                None => vec![ValidateMessage {
+                    message: String::from(&format!("{e}")),
+                    offset: 0,
+                    length: 0,
+                }],
+            };
+            ValidateEntitiesResult {
+                success: false,
+                errors: Some(validate_errs),
+            }
+        }
+    };
+    result
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::fs;
+    use std::sync::OnceLock;
+
+    static SCHEMA_STR: OnceLock<String> = OnceLock::new();
+
+    fn get_schema() -> &'static String {
+        SCHEMA_STR.get_or_init(|| {
+            fs::read_to_string("../testdata/entityattr/cedarschema.json")
+                .expect("Failed to read cedarschema file")
+        })
+    }
+
+    #[test]
+    fn validate_entities_attrs_nested() {
+        let entities_str =
+            fs::read_to_string("../testdata/entityattr/expected2.cedarentities.json")
+                .expect("Failed to read entities file");
+        let result = validate_entities_schema_json(get_schema(), &entities_str);
+        assert!(matches!(
+            result,
+            ValidateEntitiesResult {
+                success: false,
+                errors: _,
+            }
+        ));
+    }
+}

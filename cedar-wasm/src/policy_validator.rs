@@ -1,0 +1,153 @@
+// Copyright Cedar Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+use cedar_policy::{PolicySet, Schema, ValidationMode, Validator};
+use miette::Diagnostic;
+use serde::{Deserialize, Serialize};
+use std::str::FromStr;
+
+use crate::validate_message::ValidateMessage;
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ValidatePolicyResult {
+    pub success: bool,
+    warnings: Option<Vec<ValidateMessage>>,
+    errors: Option<Vec<ValidateMessage>>,
+}
+pub fn validate_policy_schema_json(
+    input_schema_str: &str,
+    input_policies_str: &str,
+) -> ValidatePolicyResult {
+    let schema = match Schema::from_json_str(&input_schema_str) {
+        Ok(schema) => schema,
+        Err(e) => {
+            // example error message
+            // JSON Schema file could not be parsed: expected `,` or `}` at line 8 column 38'
+            return ValidatePolicyResult {
+                success: false,
+                warnings: None,
+                errors: Some(vec![ValidateMessage {
+                    message: String::from(&format!("{e}")),
+                    offset: 0,
+                    length: 0,
+                }]),
+            };
+        }
+    };
+    return validate_policy_schema(schema, input_policies_str);
+}
+pub fn validate_policy_schema_cedar(
+    input_schema_str: &str,
+    input_policies_str: &str,
+) -> ValidatePolicyResult {
+    let schema_tuple = match Schema::from_cedarschema_str(&input_schema_str) {
+        Ok(schema_tuple) => schema_tuple,
+        Err(e) => {
+            return ValidatePolicyResult {
+                success: false,
+                warnings: None,
+                errors: Some(vec![ValidateMessage {
+                    message: String::from(&format!("{e}")),
+                    offset: 0,
+                    length: 0,
+                }]),
+            };
+        }
+    };
+    return validate_policy_schema(schema_tuple.0, input_policies_str);
+}
+
+fn validate_policy_schema(schema: Schema, input_policies_str: &str) -> ValidatePolicyResult {
+    let validator = Validator::new(schema);
+    let pset = match PolicySet::from_str(&input_policies_str) {
+        Ok(pset) => pset,
+        Err(_e) => {
+            return ValidatePolicyResult {
+                success: false,
+                warnings: None,
+                errors: None,
+            }
+        }
+    };
+    let result = validator.validate(&pset, ValidationMode::Strict);
+    
+    let mut validate_warnings = Vec::new();
+    result.validation_warnings().for_each(|w| {
+        w.labels().iter_mut().for_each(|labels| {
+            labels.as_mut().for_each(|labeled_span| {
+                let vpm = ValidateMessage {
+                    message: match labeled_span.label() {
+                        None => match w.help() {
+                            None => w.to_string(),
+                            Some(help) => format!("{}\n{}", w, help),
+                        },
+                        Some(msg) => match w.help() {
+                            None => format!("{}\n{}", w, msg),
+                            Some(help) => format!("{}\n{}\n{}", w, msg, help),
+                        },
+                    },
+                    offset: labeled_span.offset(),
+                    length: labeled_span.len(),
+                };
+                validate_warnings.push(vpm);
+            });
+        });
+    });
+    
+    if result.validation_passed() {
+        return ValidatePolicyResult {
+            success: true,
+            warnings: if validate_warnings.is_empty() { None } else { Some(validate_warnings) },
+            errors: None,
+        };
+    } else {
+        let mut validate_errs = Vec::new();
+        result.validation_errors().for_each(|e| {
+            e.labels().iter_mut().for_each(|labels| {
+                labels.as_mut().for_each(|labeled_span| {
+                    let vpm = ValidateMessage {
+                        message: match labeled_span.label() {
+                            None => match e.help() {
+                                None => e.to_string(),
+                                Some(help) => format!("{}\n{}", e, help),
+                            },
+                            Some(msg) => match e.help() {
+                                None => format!("{}\n{}", e, msg),
+                                Some(help) => format!("{}\n{}\n{}", e, msg, help),
+                            },
+                        },
+                        offset: labeled_span.offset(),
+                        length: labeled_span.len(),
+                    };
+                    validate_errs.push(vpm);
+                });
+            });
+        });
+        
+        return ValidatePolicyResult {
+            success: false,
+            warnings: if validate_warnings.is_empty() { None } else { Some(validate_warnings) },
+            errors: Some(validate_errs),
+        };
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn analyze_policy_permit() {
+        let result = validate_policy_schema_json(
+            "{ \"entityTypes\": [], \"actions\": [] }",
+            "permit(principal, action, resource);",
+        );
+        assert!(matches!(
+            result,
+            ValidatePolicyResult {
+                success: false,
+                warnings: _,
+                errors: _,
+            }
+        ));
+    }
+}

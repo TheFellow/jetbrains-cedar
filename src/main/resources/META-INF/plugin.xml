@@ -1,0 +1,7 @@
+<idea-plugin>
+    <id>io.github.thefellow.cedar</id>
+    <name>Cedar</name>
+    <vendor url="https://github.com/TheFellow/jetbrains-cedar">TheFellow</vendor>
+    <description>placeholder</description>
+    <depends>com.intellij.modules.platform</depends>
+</idea-plugin>
