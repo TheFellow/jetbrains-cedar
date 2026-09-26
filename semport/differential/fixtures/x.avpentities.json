@@ -1,0 +1,7 @@
+[
+  {
+    "identifier": { "entityType": "NS::User", "entityId": "alice" },
+    "attributes": { "name": { "string": "Alice" }, "mgr": { "entityIdentifier": { "entityType": "NS::User", "entityId": "bob" } } },
+    "parents": [{ "entityType": "NS::Group", "entityId": "g" }]
+  }
+]

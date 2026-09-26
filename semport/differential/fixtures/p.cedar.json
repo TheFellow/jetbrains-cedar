@@ -1,0 +1,10 @@
+{
+  "effect": "permit",
+  "principal": { "op": "==", "entity": { "type": "User", "id": "alice" } },
+  "action": { "op": "in", "entities": [{ "type": "Action", "id": "view" }, { "type": "NS::Action", "id": "edit" }] },
+  "resource": { "op": "is", "entity_type": "Photo", "in": { "entity": { "type": "Album", "id": "a" } } },
+  "annotations": { "id": "x" },
+  "conditions": [
+    { "kind": "when", "body": { "&&": { "left": { "==": { "left": { "Var": "principal" }, "right": { "Value": { "__entity": { "type": "User", "id": "bob" } } } } }, "right": { "if-then-else": { "if": { "Value": true }, "then": { "Value": 1 }, "else": { "Value": 2 } } } } } }
+  ]
+}

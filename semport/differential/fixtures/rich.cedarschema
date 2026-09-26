@@ -1,0 +1,21 @@
+// comment line
+namespace App::Sub {
+  type Name = String;
+  type Addr = { street: String, "zip code"?: Long, geo: Geo };
+  entity Geo = { lat: decimal, lon: decimal };
+  entity Color enum ["red", "green", "blue"];
+  entity A, B in [Group] = { tags: Set<String>, owner: User };
+  entity Group;
+  entity User in Group {
+    name: Name,
+    addr: Addr,
+    nested: { a: Long, b: { c: String } },
+    friends: Set<User>,
+    ip: __cedar::ipaddr,
+  } tags String;
+  action view, "edit item" appliesTo { principal: [User, A], resource: [Group], context: { flag: Bool } };
+  action "read" in [view, Other::Action::"x"];
+  action del in view;
+}
+entity Top; // trailing
+action "top" appliesTo { principal: Top, resource: Top };

@@ -1,0 +1,8 @@
+[
+  {
+    "template_id": "t0",
+    "link_id": "link0",
+    "args": { "?principal": "NS::User::\"alice\"", "?resource": "NS::Doc::\"d1\"" }
+  },
+  { "template_id": "t1", "link_id": "link1", "args": { "?principal": "User::\"bob\"" } }
+]

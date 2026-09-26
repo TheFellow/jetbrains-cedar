@@ -1,0 +1,14 @@
+namespace NS {
+entity User in [Group, Team] {
+  "name": String,
+  owner?: NS::User,
+  s: Set<Team>
+};
+entity Group, Team;
+type T = {x: Long};
+action "a", b, "c d" in ["x", NS::Action::"y"] appliesTo {
+  principal: [User],
+  resource: User,
+};
+}
+entity Outside in [NS::Group];

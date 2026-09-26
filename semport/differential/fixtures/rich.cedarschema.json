@@ -1,0 +1,35 @@
+{
+  "App": {
+    "annotations": { "doc": "ns" },
+    "commonTypes": {
+      "Ctx": { "type": "Record", "attributes": { "flag": { "type": "Boolean" }, "ip": { "type": "Extension", "name": "ipaddr" } } },
+      "Name": { "type": "String" }
+    },
+    "entityTypes": {
+      "User": {
+        "memberOfTypes": ["Group", "Other::Team"],
+        "annotations": { "doc": "u" },
+        "shape": { "type": "Record", "attributes": {
+          "name": { "type": "Name" },
+          "age": { "type": "Long", "required": false },
+          "boss": { "type": "Entity", "name": "User" },
+          "tags": { "type": "Set", "element": { "type": "String" } },
+          "friends": { "type": "Set", "element": { "type": "Entity", "name": "User" } },
+          "ips": { "type": "Set", "element": { "type": "Extension", "name": "ipaddr" } },
+          "addr": { "type": "Record", "attributes": { "street": { "type": "String" }, "geo": { "type": "Record", "attributes": { "lat": { "type": "Extension", "name": "decimal" } } } } },
+          "eoc": { "type": "EntityOrCommon", "name": "__cedar::String" },
+          "eoc2": { "type": "EntityOrCommon", "name": "Group" }
+        } },
+        "tags": { "type": "String" }
+      },
+      "Group": {},
+      "Color": { "enum": ["red", "green"] },
+      "Shaped": { "shape": { "type": "Ctx" } }
+    },
+    "actions": {
+      "view": { "appliesTo": { "principalTypes": ["User"], "resourceTypes": ["Group", "Other::Doc"], "context": { "type": "Ctx" } } },
+      "edit": { "memberOf": [{ "id": "view" }, { "id": "x", "type": "Other::Action" }], "appliesTo": { "principalTypes": ["User"], "resourceTypes": ["Group"], "context": { "type": "Record", "attributes": { "n": { "type": "Long" } } } } }
+    }
+  },
+  "": { "entityTypes": { "Top": { "shape": { "type": "Unknown" } } }, "actions": {} }
+}

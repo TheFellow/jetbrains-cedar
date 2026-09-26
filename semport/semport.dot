@@ -1,0 +1,279 @@
+digraph jetbrains_cedar_semport {
+  graph [
+    label="jetbrains-cedar — upstream semantic-port stewardship",
+    rankdir="LR",
+    default_max_retry="2",
+    default_fidelity="compact",
+    goal="Keep jetbrains-cedar at feature parity with cedar-policy/vscode-cedar, processing exactly one upstream commit at a time in topology-safe oldest-first order. Preserve observable extension behavior (highlighting, diagnostics, formatting, completion, hover, navigation, commands, Cedar SDK version and results) as an idiomatic IntelliJ Platform plugin in Kotlin. Every port must pass the cargo/gradle test, buildPlugin and verifyPluginStructure gates, receive independent semantic review, and end in one local commit. Every deliberate skip or failed port must append an immutable ledger event with a reviewable breadcrumb.",
+    model_stylesheet="* { llm_model: gpt-5.6-terra; llm_provider: openai; } .planner { llm_model: claude-opus-4-8; llm_provider: anthropic; } .implementer { llm_model: gpt-5.6-sol; llm_provider: openai; } .reviewer { llm_model: claude-opus-4-8; llm_provider: anthropic; }"
+  ];
+
+  node [
+    system_prompt="Work in jetbrains-cedar, a semantic port of github.com/cedar-policy/vscode-cedar to the IntelliJ Platform. Read AGENTS.md completely before acting, and semport/MAPPING.md for the upstream-file to Kotlin-file correspondence. Read the exact upstream source and tests for the selected full SHA. Upstream TypeScript modules under src/*.ts are ported near line-for-line to src/main/kotlin/io/github/thefellow/cedar/core against the vscode shim package; IntelliJ integration lives in the ide package; upstream vscode-cedar-wasm/src/*.rs maps to cedar-wasm/src/*.rs (JSON C ABI instead of wasm-bindgen); syntaxes/*.json are copied verbatim to src/main/resources/syntaxes; testdata/ is mirrored. Preserve observable behavior; translate VS Code API usage to the closest idiomatic IntelliJ Platform equivalent. Use rg. Do not edit semport/ledger.tsv or semport/skipped and semport/wedged evidence except in the stage that explicitly owns those files."
+  ];
+
+  Start [shape="Mdiamond", label="Start"];
+  Exit [shape="Msquare", label="Stop"];
+
+  Preflight [
+    shape="parallelogram",
+    label="0) Require clean worktree",
+    timeout="10s",
+    tool_command="test -z \"$(git status --porcelain --untracked-files=all)\""
+  ];
+
+  Fetch [
+    shape="tab",
+    label="1) Discover and select one commit",
+    class="planner",
+    cwd=".",
+    fresh_session="true",
+    max_turns="40",
+    max_tool_rounds="40",
+    reasoning_effort="low",
+    prompt="Create .ai if needed. Run `python3 semport/ledger.py next`. If it prints an event, write that exact row to .ai/semport_next.tsv and write `git -C inspiration/vscode-cedar show --no-patch --format='%%H%%n%%cI%%n%%an%%n%%s' <full-sha>` to .ai/semport_upstream.md, then stop. If it prints CAUGHT_UP, ensure inspiration/vscode-cedar exists (clone https://github.com/cedar-policy/vscode-cedar.git there if absent), run `git -C inspiration/vscode-cedar fetch origin main`, then `python3 semport/ledger.py discover --upstream inspiration/vscode-cedar --revision origin/main`. If ledger.tsv changed, validate it, commit only ledger.tsv with message `semport: discover upstream vscode-cedar commits`, and do not push. Run `next` again. Write either its exact event row or the literal CAUGHT_UP to .ai/semport_next.tsv. For an event, also write the upstream metadata described above. Process no commit in this stage."
+  ];
+
+  CaughtUp [
+    shape="parallelogram",
+    label="Caught up?",
+    timeout="10s",
+    tool_command="grep -Fxq 'CAUGHT_UP' .ai/semport_next.tsv"
+  ];
+
+  Analyze [
+    shape="tab",
+    label="2) Analyze semantic delta",
+    class="planner",
+    cwd=".",
+    fidelity="full",
+    fresh_session="true",
+    max_turns="100",
+    max_tool_rounds="100",
+    reasoning_effort="high",
+    prompt="Read the full SHA from .ai/semport_next.tsv and metadata from .ai/semport_upstream.md. Inspect `git -C inspiration/vscode-cedar show --find-renames <sha>` plus every directly relevant upstream implementation and test. Inspect the corresponding jetbrains-cedar code (see semport/MAPPING.md). Write .ai/semport_decision.md with FIRST LINE exactly `PORT` or `SKIP`. After a blank line, give the semantic delta, affected public and internal contracts, upstream source/test references, Kotlin/Rust target references, IntelliJ Platform mapping, compatibility/security/performance implications, and proposed tests. Choose SKIP only when there is provably no observable JetBrains plugin effect (e.g. VS Code packaging/CI-only changes with no plugin analog, or dependency bumps of npm-only tooling). For SKIP, also create semport/skipped/<full-sha>.md using semport/skipped/README.md; do not transition the ledger or commit. For PORT, do not change tracked files."
+  ];
+
+  IsPort [
+    shape="parallelogram",
+    label="Port or skip?",
+    timeout="10s",
+    tool_command="head -n 1 .ai/semport_decision.md | grep -Fxq 'PORT'"
+  ];
+
+  ReviewSkip [
+    shape="tab",
+    label="3s) Independently review skip",
+    class="reviewer",
+    cwd=".",
+    fidelity="full",
+    fresh_session="true",
+    max_turns="70",
+    max_tool_rounds="70",
+    reasoning_effort="high",
+    prompt="Independently audit the proposed SKIP against the entire upstream diff and directly relevant tests. Read the breadcrumb and corresponding plugin behavior. If no port is required, correct any evidence defects and write .ai/semport_skip_review.md with FIRST LINE exactly `APPROVED`, followed by your rationale. If any behavioral, diagnostic, highlighting, SDK, security, or performance effect requires a port, remove the proposed skip breadcrumb, write FIRST LINE exactly `PORT`, and then write a directly executable finalized port plan with concrete upstream and Kotlin/Rust file references, acceptance criteria, tests, and VS Code-to-IntelliJ API mappings. Also copy that finalized plan to .ai/semport_plan_finalized.md. Do not touch the ledger or commit."
+  ];
+
+  SkipApproved [
+    shape="parallelogram",
+    label="Skip approved?",
+    timeout="10s",
+    tool_command="head -n 1 .ai/semport_skip_review.md | grep -Fxq 'APPROVED'"
+  ];
+
+  CommitSkip [
+    shape="tab",
+    label="4s) Append skip event and commit",
+    cwd=".",
+    fresh_session="true",
+    max_turns="30",
+    reasoning_effort="low",
+    prompt="Read the full SHA from .ai/semport_next.tsv. Confirm .ai/semport_skip_review.md starts with APPROVED and the canonical semport/skipped/<full-sha>.md exists. Run `python3 semport/ledger.py transition <full-sha> acknowledged`, then `python3 semport/ledger.py verify --repository .` and `python3 scripts/semport_guard.py`. Stage only semport/ledger.tsv and that breadcrumb. Confirm the staged diff contains one appended terminal event and one evidence file, then commit locally as `semport: acknowledge <12-char-sha> - <upstream subject summary>`. Never push. Remove the semport scratch files under .ai and stop."
+  ];
+
+  FinalizePlan [
+    shape="tab",
+    label="3p) Finalize Kotlin port plan",
+    class="planner",
+    cwd=".",
+    fidelity="full",
+    fresh_session="true",
+    max_turns="80",
+    max_tool_rounds="80",
+    reasoning_effort="high",
+    prompt="Turn .ai/semport_decision.md into .ai/semport_plan_finalized.md. Re-read the relevant upstream source and tests and locate exact Kotlin/Rust/resource targets. Specify concrete edits, exact behavioral acceptance criteria, diagnostics, adversarial cases, and test fixtures (port upstream tests when they change). State VS Code-to-IntelliJ API mappings and the full repository validation contract (scripts/semport_validate.sh). Keep scope to this one upstream SHA and do not change tracked files."
+  ];
+
+  Implement [
+    shape="tab",
+    label="4p) Implement idiomatic Kotlin port",
+    class="implementer",
+    cwd=".",
+    fidelity="full",
+    fresh_session="true",
+    max_turns="200",
+    max_tool_rounds="200",
+    reasoning_effort="high",
+    scope_gate="scripts/semport_scope.sh",
+    scope_revert="true",
+    scope_gate_max_retries="2",
+    prompt="Implement only .ai/semport_plan_finalized.md. Read AGENTS.md and cited upstream implementation/tests first. Preserve upstream behavior and the near line-for-line structure of ported modules (same function names, comments and TODOs). Cedar SDK version bumps update cedar-wasm/Cargo.toml and Cargo.lock (`cargo update -p cedar-policy --precise X`). Add focused tests; port upstream tests that changed. Do not edit ledger or breadcrumb files and do not commit. Write .ai/semport_implementation.md with FIRST LINE exactly `DONE`, then list changed files, test coverage, and any justified IntelliJ Platform mapping."
+  ];
+
+  ScopeCheck [
+    shape="parallelogram",
+    label="Implementation scope gate",
+    timeout="20s",
+    tool_command="scripts/semport_scope.sh"
+  ];
+
+  Validate [
+    shape="parallelogram",
+    label="5) Cargo test, Gradle test, buildPlugin, verify",
+    timeout="20m",
+    tool_command="scripts/semport_validate.sh"
+  ];
+
+  FixValidation [
+    shape="tab",
+    label="5b) One focused validation repair",
+    class="implementer",
+    cwd=".",
+    fidelity="full",
+    fresh_session="true",
+    max_turns="120",
+    max_tool_rounds="120",
+    reasoning_effort="high",
+    scope_gate="scripts/semport_scope.sh",
+    scope_revert="true",
+    scope_gate_max_retries="1",
+    prompt="Read .ai/semport_validation.md and the finalized plan. Diagnose and fix every reported build, test, packaging, or plugin verification failure without broadening the selected upstream commit. Add regression coverage where the failure exposed a gap. Do not run the full validation contract here, do not touch stewardship files, and do not commit; the next tool stage measures the result."
+  ];
+
+  Revalidate [
+    shape="parallelogram",
+    label="5c) Re-run quality gates",
+    timeout="20m",
+    tool_command="scripts/semport_validate.sh"
+  ];
+
+  Review [
+    shape="tab",
+    label="6) Independent semantic review",
+    class="reviewer",
+    cwd=".",
+    fidelity="full",
+    fresh_session="true",
+    max_turns="100",
+    max_tool_rounds="100",
+    reasoning_effort="high",
+    prompt="Review the uncommitted port independently against the selected upstream SHA, its implementation, and tests. Read the finalized plan, validation report, `git diff`, and all changed files. Check behavioral parity (including error messages, ranges and edge cases), fidelity of ported modules to upstream structure, IntelliJ threading rules (read actions, EDT, background work), thread safety of caches, regex semantics differences between JS and Java, diagnostics, and tests. Write .ai/semport_review.md with FIRST LINE exactly `APPROVED` or `REVISE`. APPROVED requires concrete evidence and no material concern. REVISE must give actionable file/line findings ordered by severity. Do not modify tracked files, ledger, or breadcrumbs."
+  ];
+
+  ReviewApproved [
+    shape="parallelogram",
+    label="Review approved?",
+    timeout="10s",
+    tool_command="head -n 1 .ai/semport_review.md | grep -Fxq 'APPROVED'"
+  ];
+
+  FixReview [
+    shape="tab",
+    label="6b) Address review findings",
+    class="implementer",
+    cwd=".",
+    fidelity="full",
+    fresh_session="true",
+    max_turns="140",
+    max_tool_rounds="140",
+    reasoning_effort="high",
+    scope_gate="scripts/semport_scope.sh",
+    scope_revert="true",
+    scope_gate_max_retries="1",
+    prompt="Read .ai/semport_review.md and resolve every material finding while preserving the one-SHA scope. Add missing regression/adversarial tests. Do not touch stewardship files, run the complete validation contract, or commit; subsequent stages measure and independently re-review the result."
+  ];
+
+  ValidateReviewFix [
+    shape="parallelogram",
+    label="6c) Validate review fixes",
+    timeout="20m",
+    tool_command="scripts/semport_validate.sh"
+  ];
+
+  FinalReview [
+    shape="tab",
+    label="6d) Final independent review",
+    class="reviewer",
+    cwd=".",
+    fidelity="full",
+    fresh_session="true",
+    max_turns="80",
+    max_tool_rounds="80",
+    reasoning_effort="high",
+    prompt="Re-review the corrected diff against the selected upstream SHA and prior findings. Confirm the green validation report and that each material finding is resolved without semantic regression or scope creep. Write .ai/semport_final_review.md with FIRST LINE exactly `APPROVED` or `WEDGE`, followed by evidence. Do not change tracked files."
+  ];
+
+  FinalApproved [
+    shape="parallelogram",
+    label="Final review approved?",
+    timeout="10s",
+    tool_command="head -n 1 .ai/semport_final_review.md | grep -Fxq 'APPROVED'"
+  ];
+
+  CommitPort [
+    shape="tab",
+    label="7) Append implemented event and commit",
+    cwd=".",
+    fresh_session="true",
+    max_turns="40",
+    reasoning_effort="low",
+    requires_green_build="scripts/semport_validate.sh",
+    prompt="Read the selected full SHA, approved review, and upstream subject. Ensure the worktree contains only the reviewed implementation scope. Run `python3 semport/ledger.py transition <full-sha> implemented`, `python3 semport/ledger.py verify --repository .`, and `python3 scripts/semport_guard.py`. Stage the complete reviewed port plus semport/ledger.tsv, but never .ai or inspiration. Inspect the staged diff and confirm it contains exactly this upstream semantic port and one appended terminal event. Commit locally as `semport: implement <12-char-sha> - <brief subject>`, with a body summarizing semantics and tests. Never push. Remove semport scratch files under .ai and stop."
+  ];
+
+  Wedge [
+    shape="tab",
+    label="Wedge with recoverable evidence",
+    cwd=".",
+    fidelity="full",
+    fresh_session="true",
+    max_turns="50",
+    max_tool_rounds="50",
+    reasoning_effort="high",
+    prompt="The one permitted repair cycle could not satisfy validation or review. Read the selected full SHA, plan, validation, and reviews. Preserve ALL failed implementation changes with `git stash push --include-untracked -m \"semport wedge <full-sha>\"`; verify the worktree is clean and record the exact stash reference. Create semport/wedged/<full-sha>.md using semport/wedged/README.md, including upstream metadata, attempted semantics, exact failures, affected files/tests, stash reference, and recovery plan. Run `python3 semport/ledger.py transition <full-sha> wedged`, verify the ledger and guard, stage only the breadcrumb and ledger, inspect the staged diff, and commit locally as `semport: wedge <12-char-sha> - port needs intervention`. Never push or drop the stash. Remove semport scratch files under .ai and stop."
+  ];
+
+  Start -> Preflight;
+  Preflight -> Fetch [condition="outcome=success"];
+  Preflight -> Exit [condition="outcome=fail", label="dirty — stop"];
+  Fetch -> CaughtUp;
+  CaughtUp -> Exit [condition="outcome=success", label="caught up"];
+  CaughtUp -> Analyze [condition="outcome=fail", label="one pending commit"];
+  Analyze -> IsPort;
+  IsPort -> FinalizePlan [condition="outcome=success", label="port"];
+  IsPort -> ReviewSkip [condition="outcome=fail", label="proposed skip"];
+  ReviewSkip -> SkipApproved;
+  SkipApproved -> CommitSkip [condition="outcome=success", label="approved skip"];
+  SkipApproved -> Implement [condition="outcome=fail", label="reclassified port"];
+  CommitSkip -> Fetch [loop_restart="true"];
+  FinalizePlan -> Implement;
+  Implement -> ScopeCheck;
+  ScopeCheck -> Validate [condition="outcome=success"];
+  ScopeCheck -> Wedge [condition="outcome=fail"];
+  Validate -> Review [condition="outcome=success"];
+  Validate -> FixValidation [condition="outcome=fail"];
+  FixValidation -> Revalidate;
+  Revalidate -> Review [condition="outcome=success"];
+  Revalidate -> Wedge [condition="outcome=fail"];
+  Review -> ReviewApproved;
+  ReviewApproved -> CommitPort [condition="outcome=success", label="approved"];
+  ReviewApproved -> FixReview [condition="outcome=fail", label="revise"];
+  FixReview -> ValidateReviewFix;
+  ValidateReviewFix -> FinalReview [condition="outcome=success"];
+  ValidateReviewFix -> Wedge [condition="outcome=fail"];
+  FinalReview -> FinalApproved;
+  FinalApproved -> CommitPort [condition="outcome=success", label="approved"];
+  FinalApproved -> Wedge [condition="outcome=fail", label="still blocked"];
+  CommitPort -> Fetch [loop_restart="true"];
+  Wedge -> Fetch [loop_restart="true"];
+}

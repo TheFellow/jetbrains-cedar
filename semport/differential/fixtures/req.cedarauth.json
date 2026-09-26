@@ -1,0 +1,6 @@
+{
+  "principal": "NS::User::\"alice\"",
+  "action": "NS::Action::\"view\"",
+  "resource": "Photo::\"p1\"",
+  "context": { "a": 1 }
+}

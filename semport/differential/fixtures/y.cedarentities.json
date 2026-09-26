@@ -1,0 +1,9 @@
+[
+  {
+    "uid": { "__entity": { "type": "NS::User", "id": "alice" } },
+    "attrs": { "ip": { "__extn": { "fn": "ip", "arg": "1.2.3.4" } }, "d": { "fn": "decimal", "arg": "1.0" }, "old": { "__expr": "x" }, "ref": { "type": "NS::User", "id": "bob" }, "n": 1 },
+    "parents": ["NS::Group::\"g\"", { "type": "NS::Group", "id": "h" }],
+    "tags": { "t": "v" }
+  },
+  { "uid": "NS::User::\"bob\"", "attrs": {}, "parents": [] }
+]
