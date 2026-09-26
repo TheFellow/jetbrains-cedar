@@ -76,6 +76,11 @@
         <editorNotificationProvider implementation="io.github.thefellow.cedar.ide.actions.JsonPreviewNotificationProvider"/>
     </extensions>
 
+    <projectListeners>
+        <listener class="io.github.thefellow.cedar.ide.actions.JsonPreviewCloseListener"
+                  topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
+    </projectListeners>
+
     <applicationListeners>
         <listener class="io.github.thefellow.cedar.ide.actions.JsonPreviewSaveListener"
                   topic="com.intellij.openapi.fileEditor.FileDocumentManagerListener"/>

@@ -53,5 +53,8 @@
                              instance="io.github.thefellow.cedar.ide.settings.CedarConfigurable"/>
 
         <notificationGroup id="Cedar" displayType="BALLOON"/>
+
+        <!-- compile the Cedar SDK wasm module in the background so no user action waits for it -->
+        <postStartupActivity implementation="io.github.thefellow.cedar.ide.CedarWarmUp"/>
     </extensions>
 </idea-plugin>

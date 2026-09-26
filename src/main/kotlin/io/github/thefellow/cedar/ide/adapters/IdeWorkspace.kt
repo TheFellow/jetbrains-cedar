@@ -36,7 +36,7 @@ class IdeWorkspace(private val project: Project) : Workspace {
 
     override fun getWorkspaceFolder(uri: Uri): Uri? {
         val file = virtualFileOf(uri) ?: return super.getWorkspaceFolder(uri)
-        val root = ReadAction.compute<com.intellij.openapi.vfs.VirtualFile?, RuntimeException> {
+        val root = ReadAction.computeBlocking<com.intellij.openapi.vfs.VirtualFile?, RuntimeException> {
             ProjectFileIndex.getInstance(project).getContentRootForFile(file)
         }
         return root?.let { uriOf(it) } ?: super.getWorkspaceFolder(uri)
@@ -52,7 +52,7 @@ class IdeWorkspace(private val project: Project) : Workspace {
     }
 
     override fun stat(uri: Uri): FileType? {
-        val file = virtualFileOf(uri) ?: LocalFileSystem.getInstance().refreshAndFindFileByPath(uri.path)
+        val file = virtualFileOf(uri) ?: LocalFileSystem.getInstance().findFileByPath(uri.path)
         return when {
             file == null -> null
             file.isDirectory -> FileType.Directory

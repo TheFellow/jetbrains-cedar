@@ -95,9 +95,11 @@ class AboutAction : CedarAction() {
     override fun perform(e: AnActionEvent, ctx: CedarActionContext?) {
         val plugin = PluginManagerCore.getPlugin(PluginId.getId("io.github.thefellow.cedar"))
         val app = ApplicationInfo.getInstance()
+        val sdkVersion = e.project?.let { withCedarProgress(it, "Loading Cedar SDK") { Cedar.getCedarSDKVersion() } }
+            ?: Cedar.getCedarSDKVersion()
         val extensionDetails =
             "${plugin?.pluginId?.idString ?: "io.github.thefellow.cedar"}: ${plugin?.version ?: "?"}\n" +
-                "Cedar SDK: ${Cedar.getCedarSDKVersion()}\n" +
+                "Cedar SDK: $sdkVersion\n" +
                 "${app.fullApplicationName}: ${app.fullVersion} (${app.build.asString()})\n" +
                 "Java: ${System.getProperty("java.runtime.version")}\n"
         val result = Messages.showDialog(e.project, extensionDetails, "About Cedar", arrayOf("OK", "Copy"), 0, null)

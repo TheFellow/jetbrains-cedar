@@ -16,6 +16,7 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileDocumentManagerListener
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Key
@@ -52,20 +53,26 @@ object JsonPreviews {
     /** Upstream fires onDidChange for the virtual uri when the source document is saved. */
     fun refresh(source: VirtualFile) {
         val preview = previews[source.url] ?: return
-        val doc = IdeTextDocument.of(source) ?: return
-        val text = cedarJsonDocumentValue(doc)
-        ApplicationManager.getApplication().invokeLater {
-            val document = FileDocumentManager.getInstance().getDocument(preview) ?: return@invokeLater
-            WriteAction.run<RuntimeException> {
-                document.setReadOnly(false)
-                document.setText(text)
-                document.setReadOnly(true)
+        // the Cedar SDK call runs off the EDT; only the document update happens there
+        ApplicationManager.getApplication().executeOnPooledThread {
+            val doc = IdeTextDocument.of(source) ?: return@executeOnPooledThread
+            val text = cedarJsonDocumentValue(doc)
+            ApplicationManager.getApplication().invokeLater {
+                if (previews[source.url] !== preview) return@invokeLater
+                val document = FileDocumentManager.getInstance().getDocument(preview) ?: return@invokeLater
+                WriteAction.run<RuntimeException> {
+                    document.setReadOnly(false)
+                    document.setText(text)
+                    document.setReadOnly(true)
+                }
             }
         }
     }
 
+    fun isOpenPreview(source: VirtualFile) = previews.containsKey(source.url)
+
     fun forget(preview: VirtualFile) {
-        preview.getUserData(SOURCE)?.let { previews.remove(it.url) }
+        preview.getUserData(SOURCE)?.let { previews.remove(it.url, preview) }
     }
 }
 
@@ -86,9 +93,16 @@ class JsonPreviewAction : CedarAction() {
 class JsonPreviewSaveListener : FileDocumentManagerListener {
     override fun beforeDocumentSaving(document: Document) {
         val file = FileDocumentManager.getInstance().getFile(document) ?: return
-        if (languageIdOf(file) == "cedar" || languageIdOf(file) == "cedarschema") {
-            ApplicationManager.getApplication().invokeLater { JsonPreviews.refresh(file) }
-        }
+        if (JsonPreviews.isOpenPreview(file)) JsonPreviews.refresh(file)
+    }
+}
+
+/** Upstream drops the virtual document on `onDidCloseTextDocument`: forget a preview when its tab closes. */
+class JsonPreviewCloseListener : FileEditorManagerListener {
+    override fun fileClosed(source: FileEditorManager, file: VirtualFile) {
+        if (file.getUserData(JsonPreviews.SOURCE) == null) return
+        if (ProjectManager.getInstance().openProjects.any { FileEditorManager.getInstance(it).isFileOpen(file) }) return
+        JsonPreviews.forget(file)
     }
 }
 

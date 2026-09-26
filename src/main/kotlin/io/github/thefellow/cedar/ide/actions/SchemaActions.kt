@@ -88,10 +88,12 @@ class SchemaTranslateAction : CedarAction() {
         }
 
         val schemaText = schemaDoc.getText()
-        val translateResult: TranslateSchemaResult = if (schemaDoc.languageId == "cedarschema") {
-            Cedar.translateSchemaToJSON(schemaText)
-        } else {
-            Cedar.translateSchemaFromJSON(schemaText)
+        val translateResult: TranslateSchemaResult = withCedarProgress(ctx.project, "Translating Cedar schema") {
+            if (schemaDoc.languageId == "cedarschema") {
+                Cedar.translateSchemaToJSON(schemaText)
+            } else {
+                Cedar.translateSchemaFromJSON(schemaText)
+            }
         }
         if (translateResult.success && translateResult.schema != null) {
             val uri = schemaDoc.uri
@@ -142,7 +144,7 @@ fun saveTextAndFormat(project: Project, uri: Uri, text: String): Boolean {
     }
 
     openFile(project, vf)
-    ApplicationManager.getApplication().invokeLater {
+    ApplicationManager.getApplication().invokeLater({
         val doc = FileDocumentManager.getInstance().getDocument(vf) ?: return@invokeLater
         val psi = PsiDocumentManager.getInstance(project).run { commitDocument(doc); getPsiFile(doc) }
         if (psi != null) {
@@ -151,6 +153,6 @@ fun saveTextAndFormat(project: Project, uri: Uri, text: String): Boolean {
             })
         }
         WriteAction.run<RuntimeException> { FileDocumentManager.getInstance().saveDocument(doc) }
-    }
+    }, project.disposed)
     return true
 }

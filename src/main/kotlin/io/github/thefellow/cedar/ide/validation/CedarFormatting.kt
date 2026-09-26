@@ -3,12 +3,14 @@
 
 package io.github.thefellow.cedar.ide.validation
 
+import com.intellij.application.options.CodeStyle
 import com.intellij.application.options.CodeStyleAbstractConfigurable
 import com.intellij.application.options.CodeStyleAbstractPanel
 import com.intellij.application.options.IndentOptionsEditor
 import com.intellij.application.options.TabbedLanguageCodeStylePanel
 import com.intellij.formatting.FormattingContext
-import com.intellij.formatting.service.AbstractDocumentFormattingService
+import com.intellij.formatting.service.AsyncDocumentFormattingService
+import com.intellij.formatting.service.AsyncFormattingRequest
 import com.intellij.formatting.service.FormattingService
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.fileEditor.FileDocumentManager
@@ -19,7 +21,9 @@ import com.intellij.psi.codeStyle.CodeStyleSettings
 import com.intellij.psi.codeStyle.CodeStyleSettingsCustomizable
 import com.intellij.psi.codeStyle.CommonCodeStyleSettings
 import com.intellij.psi.codeStyle.LanguageCodeStyleSettingsProvider
-import io.github.thefellow.cedar.ide.adapters.IdeTextDocument
+import io.github.thefellow.cedar.core.formatCedarDoc
+import io.github.thefellow.cedar.ide.adapters.uriOf
+import io.github.thefellow.cedar.vscode.StringTextDocument
 import io.github.thefellow.cedar.ide.lang.CedarFileType
 import io.github.thefellow.cedar.ide.lang.CedarLanguage
 
@@ -29,33 +33,44 @@ import io.github.thefellow.cedar.ide.lang.CedarLanguage
  * formatter, so partial-range formatting requests (e.g. auto-indent) are left alone.
  * Cedar schema formatting is not implemented upstream (format.ts `formatCedarSchemaDoc` returns null).
  */
-class CedarFormattingService : AbstractDocumentFormattingService() {
+class CedarFormattingService : AsyncDocumentFormattingService() {
     override fun getFeatures(): Set<FormattingService.Feature> = emptySet()
 
     override fun canFormat(file: PsiFile): Boolean = file.fileType == CedarFileType
 
-    override fun formatDocument(
-        document: Document,
-        formattingRanges: List<TextRange>,
-        formattingContext: FormattingContext,
-        canChangeWhiteSpaceOnly: Boolean,
-        quickFormat: Boolean,
-    ) {
-        val wholeDocument = formattingRanges.any { it.startOffset <= 0 && it.endOffset >= document.textLength }
-        if (!wholeDocument) return
-        val file = formattingContext.virtualFile ?: FileDocumentManager.getInstance().getFile(document) ?: return
-        val service = CedarValidationService.getInstance(formattingContext.project)
-        val cedarDoc = IdeTextDocument(document, file)
+    override fun getNotificationGroupId() = "Cedar"
 
-        // don't try and format if syntax doesn't validate
-        if (!service.validateCedarDoc(cedarDoc)) {
-            return
-        }
+    override fun getName() = "Cedar"
 
-        val formattedPolicy = service.formatCedarDoc(cedarDoc, formattingContext.containingFile)
-        if (formattedPolicy != null && formattedPolicy != document.text) {
-            // use replacement Range of full document
-            document.replaceString(0, document.textLength, formattedPolicy)
+    /** The Cedar SDK runs off the EDT and outside the write action; only the resulting text is applied. */
+    override fun createFormattingTask(request: AsyncFormattingRequest): FormattingTask? {
+        val context = request.context
+        val text = request.documentText
+        val wholeDocument = request.formattingRanges.any { it.startOffset <= 0 && it.endOffset >= text.length }
+        if (!wholeDocument) return null
+        val psiFile = context.containingFile
+        val file = context.virtualFile ?: psiFile.viewProvider.virtualFile
+        val version = psiFile.viewProvider.document?.modificationStamp ?: 0L
+        val cedarDoc = StringTextDocument(text, uriOf(file), "cedar", version)
+        val service = CedarValidationService.getInstance(context.project)
+        val settings = CodeStyle.getSettings(psiFile)
+        val tabSize = settings.getIndentOptions(CedarFileType).INDENT_SIZE
+        val wordWrapColumn = settings.getRightMargin(CedarLanguage)
+        return object : FormattingTask {
+            @Volatile private var cancelled = false
+
+            override fun run() {
+                // don't try and format if syntax doesn't validate
+                val formattedPolicy = if (service.validateCedarDoc(cedarDoc)) formatCedarDoc(cedarDoc, tabSize, wordWrapColumn) else null
+                if (!cancelled) request.onTextReady(formattedPolicy ?: text)
+            }
+
+            override fun cancel(): Boolean {
+                cancelled = true
+                return true
+            }
+
+            override fun isRunUnderProgress() = true
         }
     }
 }

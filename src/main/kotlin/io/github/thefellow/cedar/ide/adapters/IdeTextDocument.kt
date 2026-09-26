@@ -40,15 +40,15 @@ class IdeTextDocument(
     languageId: String = languageIdOf(file),
 ) : StringTextDocument(text.toString(), uriOf(file), languageId, document.modificationStamp) {
     companion object {
-        fun of(file: VirtualFile): IdeTextDocument? = ReadAction.compute<IdeTextDocument?, RuntimeException> {
-            if (!file.isValid) return@compute null
+        fun of(file: VirtualFile): IdeTextDocument? = ReadAction.computeBlocking<IdeTextDocument?, RuntimeException> {
+            if (!file.isValid) return@computeBlocking null
             FileDocumentManager.getInstance().getDocument(file)?.let { IdeTextDocument(it, file) }
         }
 
         fun of(psiFile: PsiFile): IdeTextDocument? {
             val file = psiFile.originalFile.virtualFile ?: psiFile.viewProvider.virtualFile
-            return ReadAction.compute<IdeTextDocument?, RuntimeException> {
-                val document = psiFile.viewProvider.document ?: return@compute null
+            return ReadAction.computeBlocking<IdeTextDocument?, RuntimeException> {
+                val document = psiFile.viewProvider.document ?: return@computeBlocking null
                 IdeTextDocument(document, file)
             }
         }
