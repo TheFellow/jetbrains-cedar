@@ -1,2 +1,16 @@
 <idea-plugin>
+    <!-- Upstream completion.ts, completionjson.ts, signaturehelp.ts, hover.ts -->
+    <extensions defaultExtensionNs="com.intellij">
+        <completion.contributor language="cedar"
+                                implementationClass="io.github.thefellow.cedar.ide.completion.CedarCompletionContributor"/>
+        <completion.contributor language="cedarschema"
+                                implementationClass="io.github.thefellow.cedar.ide.completion.CedarSchemaCompletionContributor"/>
+        <completion.contributor language="JSON"
+                                implementationClass="io.github.thefellow.cedar.ide.completion.CedarEntitiesJsonCompletionContributor"/>
+        <typedHandler implementation="io.github.thefellow.cedar.ide.completion.CedarTypedHandler"/>
+        <codeInsight.parameterInfo language="cedar"
+                                   implementationClass="io.github.thefellow.cedar.ide.completion.CedarParameterInfoHandler"/>
+        <platform.backend.documentation.targetProvider
+                implementation="io.github.thefellow.cedar.ide.completion.CedarDocumentationTargetProvider"/>
+    </extensions>
 </idea-plugin>
