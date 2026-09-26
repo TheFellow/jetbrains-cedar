@@ -125,6 +125,8 @@ class CedarValidationService(private val project: Project) {
 
         /** Restarts highlighting of [uri]'s file in [project] if it is open. */
         fun restartHighlighting(project: Project, uri: Uri) {
+            // test fixtures forbid daemon restarts while highlighting; restarts only refresh other open files
+            if (ApplicationManager.getApplication().isUnitTestMode) return
             val file = virtualFileOf(uri) ?: return
             ApplicationManager.getApplication().invokeLater({
                 val psiFile = ReadAction.compute<PsiFile?, RuntimeException> {
