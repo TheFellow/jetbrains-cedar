@@ -1,7 +1,57 @@
-<idea-plugin>
+<idea-plugin xmlns:xi="http://www.w3.org/2001/XInclude">
     <id>io.github.thefellow.cedar</id>
     <name>Cedar</name>
     <vendor url="https://github.com/TheFellow/jetbrains-cedar">TheFellow</vendor>
-    <description>placeholder</description>
+    <description><![CDATA[
+    <p>Cedar policy language support - syntax highlighting, formatting, and validation.</p>
+    <p>A semantic port of the <a href="https://github.com/cedar-policy/vscode-cedar">Cedar extension for
+    Visual Studio Code</a> to JetBrains IDEs, running the Cedar SDK (Rust, compiled to WebAssembly) inside the IDE.</p>
+    <ul>
+      <li>Cedar policy (<code>.cedar</code>) and Cedar schema (<code>.cedarschema</code>) syntax highlighting,
+          including <code>```cedar</code> and <code>```cedarschema</code> Markdown code blocks</li>
+      <li>Validation of Cedar policies (with and without a schema), Cedar schemas, and Cedar entities JSON files</li>
+      <li>Formatting, completion, signature help, hover, go to definition, structure view and folding</li>
+      <li>Export policies as JSON, translate schemas between Cedar and JSON formats, export schema diagrams</li>
+    </ul>
+    ]]></description>
+
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.json</depends>
+    <depends optional="true" config-file="cedar-markdown.xml">org.intellij.plugins.markdown</depends>
+
+    <!-- Feature areas, mirroring upstream src/*.ts modules. -->
+    <xi:include href="/META-INF/cedar-validation.xml" xpointer="xpointer(/idea-plugin/*)"/>
+    <xi:include href="/META-INF/cedar-navigation.xml" xpointer="xpointer(/idea-plugin/*)"/>
+    <xi:include href="/META-INF/cedar-completion.xml" xpointer="xpointer(/idea-plugin/*)"/>
+    <xi:include href="/META-INF/cedar-actions.xml" xpointer="xpointer(/idea-plugin/*)"/>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- package.json contributes.languages -->
+        <fileType name="Cedar" language="cedar" extensions="cedar"
+                  implementationClass="io.github.thefellow.cedar.ide.lang.CedarFileType" fieldName="INSTANCE"/>
+        <fileType name="Cedar Schema" language="cedarschema" extensions="cedarschema" fileNames="cedarschema"
+                  implementationClass="io.github.thefellow.cedar.ide.lang.CedarSchemaFileType" fieldName="INSTANCE"/>
+
+        <lang.parserDefinition language="cedar" implementationClass="io.github.thefellow.cedar.ide.lang.CedarParserDefinition"/>
+        <lang.parserDefinition language="cedarschema" implementationClass="io.github.thefellow.cedar.ide.lang.CedarSchemaParserDefinition"/>
+
+        <!-- package.json contributes.grammars (syntaxes/*.tmLanguage.json) -->
+        <lang.syntaxHighlighterFactory language="cedar" implementationClass="io.github.thefellow.cedar.ide.lang.CedarSyntaxHighlighterFactory"/>
+        <lang.syntaxHighlighterFactory language="cedarschema" implementationClass="io.github.thefellow.cedar.ide.lang.CedarSchemaSyntaxHighlighterFactory"/>
+        <colorSettingsPage implementation="io.github.thefellow.cedar.ide.lang.CedarColorSettingsPage"/>
+
+        <!-- language-configuration.json -->
+        <lang.commenter language="cedar" implementationClass="io.github.thefellow.cedar.ide.lang.CedarCommenter"/>
+        <lang.commenter language="cedarschema" implementationClass="io.github.thefellow.cedar.ide.lang.CedarCommenter"/>
+        <lang.braceMatcher language="cedar" implementationClass="io.github.thefellow.cedar.ide.lang.CedarBraceMatcher"/>
+        <lang.braceMatcher language="cedarschema" implementationClass="io.github.thefellow.cedar.ide.lang.CedarSchemaBraceMatcher"/>
+        <lang.quoteHandler language="cedar" implementationClass="io.github.thefellow.cedar.ide.lang.TmQuoteHandler"/>
+        <lang.quoteHandler language="cedarschema" implementationClass="io.github.thefellow.cedar.ide.lang.TmQuoteHandler"/>
+
+        <!-- package.json contributes.configuration -->
+        <projectConfigurable parentId="tools" id="io.github.thefellow.cedar.settings" displayName="Cedar"
+                             instance="io.github.thefellow.cedar.ide.settings.CedarConfigurable"/>
+
+        <notificationGroup id="Cedar" displayType="BALLOON"/>
+    </extensions>
 </idea-plugin>
