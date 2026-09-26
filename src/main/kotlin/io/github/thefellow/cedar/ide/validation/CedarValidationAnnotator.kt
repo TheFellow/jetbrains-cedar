@@ -21,8 +21,8 @@ import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
 import io.github.thefellow.cedar.core.CedarQuickFix
 import io.github.thefellow.cedar.core.CedarSchemaJSONQuickFix
-import io.github.thefellow.cedar.core.QUICKFIX_COMMAND_CEDAR_SCHEMAVALIDATE
-import io.github.thefellow.cedar.core.QUICKFIX_COMMAND_CEDAR_VALIDATE
+import io.github.thefellow.cedar.core.COMMAND_CEDAR_SCHEMAVALIDATE
+import io.github.thefellow.cedar.core.COMMAND_CEDAR_VALIDATE
 import io.github.thefellow.cedar.core.detectEntitiesDoc
 import io.github.thefellow.cedar.core.detectSchemaDoc
 import io.github.thefellow.cedar.core.isCedarSchemaJsonFile
@@ -133,8 +133,8 @@ class CodeActionIntention(private val action: CodeAction) : IntentionAction, Pri
         val service = CedarValidationService.getInstance(project)
         ApplicationManager.getApplication().executeOnPooledThread {
             when (command) {
-                QUICKFIX_COMMAND_CEDAR_VALIDATE -> service.validateCedarDoc(file0, userInitiated = true)
-                QUICKFIX_COMMAND_CEDAR_SCHEMAVALIDATE -> service.validateSchemaDoc(file0, userInitiated = true)
+                COMMAND_CEDAR_VALIDATE -> service.validateCedarDoc(file0, userInitiated = true)
+                COMMAND_CEDAR_SCHEMAVALIDATE -> service.validateSchemaDoc(file0, userInitiated = true)
             }
         }
     }

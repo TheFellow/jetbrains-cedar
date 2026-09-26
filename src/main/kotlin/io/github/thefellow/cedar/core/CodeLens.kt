@@ -11,7 +11,6 @@ import io.github.thefellow.cedar.vscode.TextDocument
 import io.github.thefellow.cedar.vscode.Workspace
 
 // strings need to match commands in package.json (upstream commands.ts)
-private const val COMMAND_CEDAR_SCHEMATRANSLATE = "cedar.schematranslate"
 
 class ValidateWithSchemaCodeLensProvider {
     fun provideCodeLenses(workspace: Workspace, document: TextDocument): List<CodeLens> {

@@ -14,8 +14,6 @@ import io.github.thefellow.cedar.vscode.TextDocument
 import io.github.thefellow.cedar.vscode.WorkspaceEdit
 
 // strings need to match commands in package.json (upstream commands.ts)
-const val QUICKFIX_COMMAND_CEDAR_VALIDATE = "cedar.validate"
-const val QUICKFIX_COMMAND_CEDAR_SCHEMAVALIDATE = "cedar.schemavalidate"
 
 class CedarQuickFix {
     companion object {
@@ -57,7 +55,7 @@ class CedarQuickFix {
             }
             fix.isPreferred = true
             fix.diagnostics = listOf(diagnostic)
-            fix.command = Command("Validate Cedar policy", QUICKFIX_COMMAND_CEDAR_VALIDATE)
+            fix.command = Command("Validate Cedar policy", COMMAND_CEDAR_VALIDATE)
         }
 
         return fix
@@ -148,7 +146,7 @@ class CedarSchemaJSONQuickFix {
         }
         fix.isPreferred = true
         fix.diagnostics = listOf(diagnostic)
-        fix.command = Command("Validate Cedar schema", QUICKFIX_COMMAND_CEDAR_SCHEMAVALIDATE)
+        fix.command = Command("Validate Cedar schema", COMMAND_CEDAR_SCHEMAVALIDATE)
 
         return fix
     }
