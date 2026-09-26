@@ -1,0 +1,6 @@
+Copyright Cedar Contributors
+
+This project is a semantic port of cedar-policy/vscode-cedar
+(https://github.com/cedar-policy/vscode-cedar), Copyright Cedar Contributors, licensed under the
+Apache License, Version 2.0. Grammars (src/main/resources/syntaxes), icons, test data (testdata/) and the
+Cedar SDK bindings (cedar-wasm/) are derived from that project.

@@ -1,0 +1,39 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - name: Cedar SDK bridge tests
+        run: cargo test --manifest-path cedar-wasm/Cargo.toml --release --locked
+      - name: Plugin tests, build and verification
+        run: ./gradlew test buildPlugin verifyPluginStructure
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugin
+          path: build/distributions/*.zip
+
+  semport-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Ledger tests and append-only guard
+        run: |
+          export PYTHONDONTWRITEBYTECODE=1
+          python3 -m unittest discover -s semport -p 'test_*.py' -v
+          python3 semport/ledger.py verify --repository .
+          base="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if git cat-file -e "$base^{commit}" 2>/dev/null; then
+            python3 scripts/semport_guard.py --base "$base"
+          else
+            python3 scripts/semport_guard.py
+          fi
