@@ -1,2 +1,20 @@
 <idea-plugin>
+    <!-- upstream documentsymbols.ts, definition.ts and parser.ts semantic tokens providers -->
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- registerDocumentSymbolProvider (Outline) -->
+        <lang.psiStructureViewFactory language="cedar" implementationClass="io.github.thefellow.cedar.ide.navigation.CedarStructureViewFactory"/>
+        <lang.psiStructureViewFactory language="cedarschema" implementationClass="io.github.thefellow.cedar.ide.navigation.CedarStructureViewFactory"/>
+        <lang.psiStructureViewFactory language="JSON" order="first" implementationClass="io.github.thefellow.cedar.ide.navigation.CedarStructureViewFactory"/>
+
+        <!-- registerFoldingRangeProvider -->
+        <lang.foldingBuilder language="cedar" implementationClass="io.github.thefellow.cedar.ide.navigation.CedarFoldingBuilder"/>
+
+        <!-- registerDefinitionProvider -->
+        <gotoDeclarationHandler implementation="io.github.thefellow.cedar.ide.navigation.CedarGotoDeclarationHandler"/>
+
+        <!-- registerDocumentSemanticTokensProvider -->
+        <externalAnnotator language="cedar" implementationClass="io.github.thefellow.cedar.ide.navigation.CedarSemanticTokensAnnotator"/>
+        <externalAnnotator language="cedarschema" implementationClass="io.github.thefellow.cedar.ide.navigation.CedarSemanticTokensAnnotator"/>
+        <externalAnnotator language="JSON" implementationClass="io.github.thefellow.cedar.ide.navigation.CedarSemanticTokensAnnotator"/>
+    </extensions>
 </idea-plugin>
