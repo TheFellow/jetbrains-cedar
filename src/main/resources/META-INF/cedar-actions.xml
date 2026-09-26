@@ -1,2 +1,83 @@
 <idea-plugin>
+    <!-- upstream package.json contributes.commands / menus and src/extension.ts registerCommand -->
+    <actions>
+        <action id="cedar.validate" class="io.github.thefellow.cedar.ide.actions.ValidateAction"
+                text="Validate Cedar Policy" description="Validate Cedar policy"/>
+        <action id="cedar.export" class="io.github.thefellow.cedar.ide.actions.ExportPolicyAction"
+                text="Export Cedar Policy as JSON" description="Export Cedar policy as JSON"/>
+        <action id="cedar.jsonpreview" class="io.github.thefellow.cedar.ide.actions.JsonPreviewAction"
+                text="JSON" description="Show the Cedar policy or Cedar schema as JSON"/>
+        <action id="cedar.schemaopen" class="io.github.thefellow.cedar.ide.actions.SchemaOpenAction"
+                text="Open Cedar Schema" description="Open Cedar schema"/>
+        <action id="cedar.schemavalidate" class="io.github.thefellow.cedar.ide.actions.SchemaValidateAction"
+                text="Validate Cedar Schema" description="Validate Cedar schema"/>
+        <action id="cedar.schematranslate" class="io.github.thefellow.cedar.ide.actions.SchemaTranslateAction"
+                text="Translate Cedar Schema" description="Translate Cedar schema between the Cedar and JSON formats"/>
+        <action id="cedar.schemaexport" class="io.github.thefellow.cedar.ide.actions.SchemaExportAction"
+                text="Export Cedar Schema" description="Export Cedar schema as a PlantUML or Mermaid class diagram"/>
+        <action id="cedar.entitiesvalidate" class="io.github.thefellow.cedar.ide.actions.EntitiesValidateAction"
+                text="Validate Cedar Entities" description="Validate Cedar entities"/>
+        <action id="cedar.entitiesadd" class="io.github.thefellow.cedar.ide.actions.EntitiesAddAction"
+                text="Add Cedar Entity" description="Add Cedar entity"/>
+        <action id="cedar.clearproblems" class="io.github.thefellow.cedar.ide.actions.ClearProblemsAction"
+                text="Clear Problems" description="Clear Cedar problems"/>
+        <action id="cedar.activate" class="io.github.thefellow.cedar.ide.actions.ActivateAction"
+                text="Activate Cedar Extension" description="Activate Cedar extension"/>
+        <action id="cedar.about" class="io.github.thefellow.cedar.ide.actions.AboutAction"
+                text="About Cedar Extension" description="About Cedar extension"/>
+        <action id="cedar.documentation" class="io.github.thefellow.cedar.ide.actions.DocumentationAction"
+                text="Open docs.cedarpolicy.com" description="Open docs.cedarpolicy.com"/>
+
+        <!-- command palette: Tools | Cedar (all commands; also reachable through Find Action) -->
+        <group id="cedar.ToolsGroup" text="Cedar" popup="true" icon="/icons/Cedar_16.svg">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+            <reference ref="cedar.validate"/>
+            <reference ref="cedar.export"/>
+            <reference ref="cedar.jsonpreview"/>
+            <separator/>
+            <reference ref="cedar.schemaopen"/>
+            <reference ref="cedar.schemavalidate"/>
+            <reference ref="cedar.schematranslate"/>
+            <reference ref="cedar.schemaexport"/>
+            <separator/>
+            <reference ref="cedar.entitiesvalidate"/>
+            <reference ref="cedar.entitiesadd"/>
+            <separator/>
+            <reference ref="cedar.clearproblems"/>
+            <reference ref="cedar.activate"/>
+            <reference ref="cedar.about"/>
+            <reference ref="cedar.documentation"/>
+        </group>
+
+        <!-- editor/context -->
+        <group id="cedar.EditorPopupGroup">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+            <separator/>
+            <reference ref="cedar.validate"/>
+            <reference ref="cedar.schemavalidate"/>
+            <reference ref="cedar.schematranslate"/>
+            <reference ref="cedar.entitiesvalidate"/>
+            <reference ref="cedar.entitiesadd"/>
+            <reference ref="cedar.schemaopen"/>
+            <reference ref="cedar.export"/>
+            <reference ref="cedar.schemaexport"/>
+            <reference ref="cedar.jsonpreview"/>
+        </group>
+
+        <!-- editor/title -->
+        <group id="cedar.EditorTabGroup">
+            <add-to-group group-id="EditorTabPopupMenu" anchor="last"/>
+            <separator/>
+            <reference ref="cedar.jsonpreview"/>
+        </group>
+    </actions>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <editorNotificationProvider implementation="io.github.thefellow.cedar.ide.actions.JsonPreviewNotificationProvider"/>
+    </extensions>
+
+    <applicationListeners>
+        <listener class="io.github.thefellow.cedar.ide.actions.JsonPreviewSaveListener"
+                  topic="com.intellij.openapi.fileEditor.FileDocumentManagerListener"/>
+    </applicationListeners>
 </idea-plugin>

@@ -10,3 +10,5 @@ out/
 # semport scratch and upstream checkout
 .ai/
 inspiration/
+# agent worktrees
+.claude/worktrees/

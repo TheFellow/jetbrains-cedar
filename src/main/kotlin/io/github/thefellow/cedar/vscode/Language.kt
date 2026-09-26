@@ -127,7 +127,7 @@ class SignatureHelp {
     var activeParameter: Int = 0
 }
 
-class QuickPickItem(val label: String, val description: String? = null, var picked: Boolean = false)
+class QuickPickItem(val label: String, val description: String? = null, var picked: Boolean = false, val detail: String? = null)
 
 /* Semantic tokens: upstream builds VS Code semantic tokens; we keep the (range, type, modifiers) triples. */
 

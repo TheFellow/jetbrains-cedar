@@ -12,11 +12,13 @@ work=.ai/differential
 rm -rf "$work" && mkdir -p "$work/node_modules/jsonc-parser"
 
 # upstream sources, made importable by node's type stripping
-cp "$upstream/src/parser.ts" "$upstream/src/regex.ts" "$work/"
+cp "$upstream/src/parser.ts" "$upstream/src/regex.ts" "$upstream/src/generate.ts" "$upstream/src/cedarschema.d.ts" "$work/"
+sed -i.bak -e "s|from './cedarschema';|from './cedarschema.d.ts';|" -e "s|^import {|import type {|" "$work/generate.ts"
 sed -i.bak \
   -e "s|^import { DEFAULT_RANGE } from './diagnostics';|const DEFAULT_RANGE = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0));|" \
   -e "s|from './regex';|from './regex.ts';|" "$work/parser.ts"
 cp "$here/parser.main.ts" "$work/main.ts"
+cp "$here/generate.main.ts" "$work/generate.main.ts"
 echo '{"type":"module"}' > "$work/package.json"
 cp -R "$here/stubs/vscode" "$here/stubs/vscode-cedar-wasm" "$work/node_modules/"
 
@@ -34,9 +36,19 @@ echo '{"name":"jsonc-parser","type":"module","exports":"./index.js"}' > "$work/n
 
 # Kotlin side (also writes schema translations the TS stub replays)
 CEDAR_PARSER_DUMP="$PWD/$work/dump" CEDAR_PARSER_FIXTURES="$PWD/$here/fixtures" \
-  mise exec -- ./gradlew --no-configuration-cache -q test --tests '*ParserDumpTest*' --rerun
+  mise exec -- ./gradlew --no-configuration-cache -q test --tests '*ParserDumpTest*' --tests '*GenerateDumpTest*' --rerun
 
 # TypeScript side
 mise exec -- node --experimental-strip-types --no-warnings "$work/main.ts" testdata "$here/fixtures" "$work/dump"
+mise exec -- node --experimental-transform-types --no-warnings "$work/generate.main.ts" testdata "$here/fixtures" "$work/dump"
 
-mise exec -- python3 "$here/cmp.py" "$work"
+status=0
+mise exec -- python3 "$here/cmp.py" "$work" || status=1
+# inputs upstream itself throws on (invalid schemas the export command never reaches) are not compared
+grep -rlx 'THREW' "$work/dump/generate-ts" | while read -r f; do rm -f "$f" "${f/generate-ts/generate-kotlin}"; done
+if diff -r "$work/dump/generate-kotlin" "$work/dump/generate-ts"; then
+  echo "generate: identical ($(find "$work/dump/generate-ts" -type f | wc -l | tr -d ' ') diagrams)"
+else
+  status=1
+fi
+exit $status
