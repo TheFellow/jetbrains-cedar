@@ -113,13 +113,15 @@ class CedarValidationService(private val project: Project) : Disposable {
             virtualFileOf(uri)?.let { it to (diagnosticCollection.get(uri)?.any { d -> d.severity == DiagnosticSeverity.Error } == true) }
         }
         if (updates.isEmpty()) return
-        ApplicationManager.getApplication().invokeLater({
+        // WolfTheProblemSolver requires a background thread
+        ApplicationManager.getApplication().executeOnPooledThread {
+            if (project.isDisposed) return@executeOnPooledThread
             val wolf = WolfTheProblemSolver.getInstance(project)
             for ((file, hasErrors) in updates) {
                 if (!file.isValid) continue
                 if (hasErrors) wolf.reportProblemsFromExternalSource(file, this) else wolf.clearProblemsFromExternalSource(file, this)
             }
-        }, project.disposed)
+        }
     }
 
     /** Runs upstream `validateTextDocument` for [doc] and returns the diagnostics to render for it. */
