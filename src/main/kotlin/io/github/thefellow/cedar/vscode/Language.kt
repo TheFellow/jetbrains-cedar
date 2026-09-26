@@ -49,6 +49,10 @@ class TextEdit(val range: Range, val newText: String) {
 }
 
 class CompletionItem(var label: String, var kind: CompletionItemKind? = null) {
+    /** `CompletionItemLabel.detail`: shown right after the label (e.g. a signature). */
+    var labelDetail: String? = null
+    /** `CompletionItemLabel.description`: shown less prominently (e.g. the owning type). */
+    var labelDescription: String? = null
     var detail: String? = null
     /** String or [MarkdownString]. */
     var documentation: Any? = null
