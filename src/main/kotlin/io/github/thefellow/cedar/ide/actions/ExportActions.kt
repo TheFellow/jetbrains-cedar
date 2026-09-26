@@ -57,8 +57,10 @@ class ExportPolicyAction : CedarAction() {
         results.forEach { result ->
             val exportFilename = cedarDoc.uri.fsPath.replace(Regex("""\.cedar$"""), "(${result.label}).cedar.json")
             var written: VirtualFile? = null
-            val exportJson = exportCedarDocPolicyById(cedarDoc, result.label, exportFilename) { path, text ->
-                written = writeLocalFile(path, text)
+            val exportJson = withCedarProgress(ctx.project, "Exporting Cedar policy") {
+                exportCedarDocPolicyById(cedarDoc, result.label, exportFilename) { path, text ->
+                    written = writeLocalFile(path, text)
+                }
             }
 
             if (exportJson.isEmpty()) {
@@ -70,9 +72,16 @@ class ExportPolicyAction : CedarAction() {
     }
 }
 
+/** Checkbox list of quick pick items, labelled like VS Code's quick pick (label, then detail). */
+internal class QuickPickChooser : ElementsChooser<QuickPickItem>(true) {
+    override fun getItemText(value: QuickPickItem) = value.detail?.let { "${value.label}  —  $it" } ?: value.label
+
+    fun textOf(value: QuickPickItem): String = getItemText(value)
+}
+
 /** The multi-select quick pick ("Export Cedar policy as JSON", canPickMany). */
 private class PolicyPickDialog(project: Project, private val items: List<QuickPickItem>) : DialogWrapper(project) {
-    private val chooser = ElementsChooser<QuickPickItem>(true).apply {
+    private val chooser = QuickPickChooser().apply {
         items.forEach { addElement(it, it.picked) }
     }
 
@@ -102,7 +111,7 @@ class SchemaExportAction : CedarAction() {
         JBPopupFactory.getInstance()
             .createPopupChooserBuilder(SchemaExportType.entries.toList())
             .setTitle("Export Cedar schema (experimental)")
-            .setRenderer(com.intellij.ui.SimpleListCellRenderer.create("") { "${it.value}  —  Class Diagram" })
+            .setRenderer(com.intellij.ui.dsl.listCellRenderer.textListCellRenderer<SchemaExportType> { "${it.value}  —  Class Diagram" })
             .setItemChosenCallback { type -> export(ctx, schemaDoc.getText(), type) }
             .createPopup()
             .let { popup -> ctx.editor?.let { popup.showInBestPositionFor(it) } ?: popup.showCenteredInCurrentWindow(ctx.project) }

@@ -22,20 +22,25 @@ import io.github.thefellow.cedar.vscode.QuickPickItem
 
 /** `vscode.window.showQuickPick` as a popup chooser; [onPicked] gets null when the popup is cancelled. */
 fun showQuickPickPopup(editor: Editor, items: List<QuickPickItem>, title: String, onPicked: (QuickPickItem?) -> Unit) {
-    var chosen = false
     JBPopupFactory.getInstance()
         .createPopupChooserBuilder(items)
         .setTitle(title)
-        .setRenderer(com.intellij.ui.SimpleListCellRenderer.create("") { it.label })
+        .setRenderer(com.intellij.ui.dsl.listCellRenderer.textListCellRenderer { it?.label })
         .setNamerForFiltering { it.label }
-        .setItemChosenCallback { chosen = true; onPicked(it) }
-        .addListener(object : JBPopupListener {
-            override fun onClosed(event: LightweightWindowEvent) {
-                if (!chosen) onPicked(null)
-            }
-        })
+        .setItemChosenCallback { onPicked(it) }
+        .addListener(quickPickCancelListener(onPicked))
         .createPopup()
         .showInBestPositionFor(editor)
+}
+
+/**
+ * Reports a cancelled quick pick as null. `closeOk` runs the item-chosen callback after `onClosed`, so an OK
+ * close must not report anything here (that would insert twice).
+ */
+internal fun quickPickCancelListener(onPicked: (QuickPickItem?) -> Unit) = object : JBPopupListener {
+    override fun onClosed(event: LightweightWindowEvent) {
+        if (!event.isOk) onPicked(null)
+    }
 }
 
 /**

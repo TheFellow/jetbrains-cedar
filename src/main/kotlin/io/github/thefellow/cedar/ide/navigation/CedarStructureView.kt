@@ -62,11 +62,11 @@ class CedarStructureViewModel(psiFile: PsiFile, editor: Editor?) :
 }
 
 private class CedarFileTreeElement(private val psiFile: PsiFile) : StructureViewTreeElement {
-    private val symbols: List<DocumentSymbol> by lazy {
-        val file = psiFile.originalFile.virtualFile ?: return@lazy emptyList()
-        val provider = CedarProviders.symbolProvider(file) ?: return@lazy emptyList()
-        val doc = IdeTextDocument.of(psiFile) ?: return@lazy emptyList()
-        provider.provideDocumentSymbols(doc)
+    /** Symbols for a document snapshot; recomputed whenever the document changes (the root outlives edits). */
+    private fun symbols(doc: IdeTextDocument): List<DocumentSymbol> {
+        val file = psiFile.originalFile.virtualFile ?: return emptyList()
+        val provider = CedarProviders.symbolProvider(file) ?: return emptyList()
+        return provider.provideDocumentSymbols(doc)
     }
 
     override fun getValue() = psiFile
@@ -76,7 +76,7 @@ private class CedarFileTreeElement(private val psiFile: PsiFile) : StructureView
     }
     override fun getChildren(): Array<TreeElement> {
         val doc = IdeTextDocument.of(psiFile) ?: return emptyArray()
-        return symbols.map { CedarSymbolTreeElement(psiFile, doc, it) }.toTypedArray()
+        return symbols(doc).map { CedarSymbolTreeElement(psiFile, doc, it) }.toTypedArray()
     }
     override fun navigate(requestFocus: Boolean) = psiFile.navigate(requestFocus)
     override fun canNavigate() = psiFile.canNavigate()
