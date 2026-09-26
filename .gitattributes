@@ -1,0 +1,2 @@
+semport/differential/fixtures/crlf.* -text
+*.bat text eol=crlf
