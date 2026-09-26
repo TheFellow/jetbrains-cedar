@@ -1,2 +1,21 @@
 <idea-plugin>
+    <!-- upstream validate.ts / diagnostics.ts / quickfix.ts / format.ts / codelens.ts -->
+    <extensions defaultExtensionNs="com.intellij">
+        <externalAnnotator language="cedar" implementationClass="io.github.thefellow.cedar.ide.validation.CedarValidationAnnotator"/>
+        <externalAnnotator language="cedarschema" implementationClass="io.github.thefellow.cedar.ide.validation.CedarValidationAnnotator"/>
+        <!-- cedarschema.json / cedarentities.json (filtered by file name in the annotator) -->
+        <externalAnnotator language="JSON" implementationClass="io.github.thefellow.cedar.ide.validation.CedarValidationAnnotator"/>
+
+        <formattingService implementation="io.github.thefellow.cedar.ide.validation.CedarFormattingService"/>
+        <langCodeStyleSettingsProvider implementation="io.github.thefellow.cedar.ide.validation.CedarLanguageCodeStyleSettingsProvider"/>
+
+        <codeInsight.daemonBoundCodeVisionProvider implementation="io.github.thefellow.cedar.ide.validation.CedarSchemaCodeVisionProvider"/>
+    </extensions>
+
+    <projectListeners>
+        <listener class="io.github.thefellow.cedar.ide.validation.CedarFileListener"
+                  topic="com.intellij.openapi.vfs.newvfs.BulkFileListener"/>
+        <listener class="io.github.thefellow.cedar.ide.validation.CedarSettingsChangeListener"
+                  topic="io.github.thefellow.cedar.ide.settings.CedarSettingsListener"/>
+    </projectListeners>
 </idea-plugin>
