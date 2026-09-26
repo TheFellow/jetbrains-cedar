@@ -4,8 +4,11 @@
     <vendor url="https://github.com/TheFellow/jetbrains-cedar">TheFellow</vendor>
     <description><![CDATA[
     <p>Cedar policy language support - syntax highlighting, formatting, and validation.</p>
-    <p>A semantic port of the <a href="https://github.com/cedar-policy/vscode-cedar">Cedar extension for
-    Visual Studio Code</a> to JetBrains IDEs, running the Cedar SDK (Rust, compiled to WebAssembly) inside the IDE.</p>
+    <p>An unofficial, community-maintained port of the official
+    <a href="https://github.com/cedar-policy/vscode-cedar">Cedar extension for Visual Studio Code</a> to JetBrains
+    IDEs, kept in step with it release by release. It runs the Cedar SDK (Rust, compiled to WebAssembly) inside the
+    IDE, so results match the VS Code extension and the <code>cedar</code> CLI.
+    Source and issues: <a href="https://github.com/TheFellow/jetbrains-cedar">github.com/TheFellow/jetbrains-cedar</a>.</p>
     <ul>
       <li>Cedar policy (<code>.cedar</code>) and Cedar schema (<code>.cedarschema</code>) syntax highlighting,
           including <code>```cedar</code> and <code>```cedarschema</code> Markdown code blocks</li>

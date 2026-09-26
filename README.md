@@ -93,6 +93,19 @@ download GoLand `2026.2.3`.
 - **Activate Cedar Extension** is kept for parity but is a no-op: the plugin is always active.
 - The JSON preview opens as a read-only editor tab with an **Open <file>** banner in place of a code lens.
 
+## Releasing
+
+1. Set `pluginVersion` in `gradle.properties` and add a matching `## <version> - <date>` section to
+   `CHANGELOG.md` (it becomes the Marketplace "What's New").
+2. Commit, then tag and push: `git tag v<version> && git push origin v<version>`.
+3. The `release` workflow tests and verifies the plugin, publishes it to the JetBrains Marketplace (needs the
+   `PUBLISH_TOKEN` repository secret: a Marketplace personal access token) and creates a GitHub release
+   with the zip.
+
+Versions track upstream (`0.10.6` = vscode-cedar 0.10.6); plugin-only releases add a fourth component
+(`0.10.6.1`). Check Marketplace compatibility locally with `./gradlew verifyPlugin -PverifyLocalOnly`
+(against the installed GoLand) or `./gradlew verifyPlugin` (downloads GoLand and IntelliJ IDEA).
+
 ## Development
 
 See [AGENTS.md](AGENTS.md) for the layout and conventions, and [semport/README.md](semport/README.md) for how

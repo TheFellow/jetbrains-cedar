@@ -1,0 +1,47 @@
+name: release
+
+# Push a tag `v<pluginVersion>` (e.g. v0.10.6.1) to test, verify, publish to the JetBrains Marketplace and
+# create a GitHub release with the plugin zip. Requires the PUBLISH_TOKEN secret (a JetBrains Marketplace
+# personal access token); without it the Marketplace step is skipped and only the GitHub release is created.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+
+      - name: Tag matches pluginVersion
+        run: |
+          version=$(sed -n 's/^pluginVersion *= *//p' gradle.properties)
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME != v$version (gradle.properties)"; exit 1; }
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Test, build and verify
+        run: |
+          cargo test --manifest-path cedar-wasm/Cargo.toml --release --locked
+          ./gradlew test buildPlugin verifyPluginStructure verifyPlugin
+
+      - name: Publish to JetBrains Marketplace
+        env:
+          PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
+        run: |
+          if [ -z "$PUBLISH_TOKEN" ]; then
+            echo "::warning::PUBLISH_TOKEN is not set; skipping Marketplace publishing"
+          else
+            ./gradlew publishPlugin
+          fi
+
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          awk -v v="## $VERSION" 'index($0, v) == 1 {on=1; next} /^## /{on=0} on' CHANGELOG.md > notes.md
+          gh release create "$GITHUB_REF_NAME" build/distributions/*.zip --title "$GITHUB_REF_NAME" --notes-file notes.md

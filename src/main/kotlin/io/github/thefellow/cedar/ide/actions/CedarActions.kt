@@ -7,14 +7,12 @@
 package io.github.thefellow.cedar.ide.actions
 
 import com.intellij.ide.BrowserUtil
-import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.ide.CopyPasteManager
@@ -93,12 +91,14 @@ class AboutAction : CedarAction() {
     override fun update(e: AnActionEvent) { e.presentation.isEnabledAndVisible = true }
 
     override fun perform(e: AnActionEvent, ctx: CedarActionContext?) {
-        val plugin = PluginManagerCore.getPlugin(PluginId.getId("io.github.thefellow.cedar"))
+        val plugin = java.util.Properties().apply {
+            AboutAction::class.java.getResourceAsStream("/cedar/plugin.properties")?.use { load(it) }
+        }
         val app = ApplicationInfo.getInstance()
         val sdkVersion = e.project?.let { withCedarProgress(it, "Loading Cedar SDK") { Cedar.getCedarSDKVersion() } }
             ?: Cedar.getCedarSDKVersion()
         val extensionDetails =
-            "${plugin?.pluginId?.idString ?: "io.github.thefellow.cedar"}: ${plugin?.version ?: "?"}\n" +
+            "${plugin.getProperty("id", "io.github.thefellow.cedar")}: ${plugin.getProperty("version", "?")}\n" +
                 "Cedar SDK: $sdkVersion\n" +
                 "${app.fullApplicationName}: ${app.fullVersion} (${app.build.asString()})\n" +
                 "Java: ${System.getProperty("java.runtime.version")}\n"

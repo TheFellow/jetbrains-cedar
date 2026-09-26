@@ -46,11 +46,46 @@ intellijPlatform {
     pluginConfiguration {
         name = providers.gradleProperty("pluginName")
         version = providers.gradleProperty("pluginVersion")
+        // the CHANGELOG.md section for this version, as HTML for the Marketplace "What's New"
+        changeNotes = providers.fileContents(layout.projectDirectory.file("CHANGELOG.md")).asText
+            .zip(providers.gradleProperty("pluginVersion")) { changelog, version ->
+                val lines = changelog.lines()
+                val start = lines.indexOfFirst { it.startsWith("## $version ") || it == "## $version" }
+                if (start < 0) {
+                    ""
+                } else {
+                    val items = lines.drop(start + 1).takeWhile { !it.startsWith("## ") }
+                        .filter { it.startsWith("- ") }
+                        .joinToString("") { "<li>${it.removePrefix("- ")}</li>" }
+                    "<ul>$items</ul>"
+                }
+            }
         ideaVersion {
             sinceBuild = providers.gradleProperty("pluginSinceBuild")
             untilBuild = provider { null }
         }
     }
+    // Marketplace publishing: PUBLISH_TOKEN is a JetBrains Marketplace personal access token.
+    publishing {
+        token = providers.environmentVariable("PUBLISH_TOKEN")
+    }
+
+    // Plugin Verifier: the local IDE when present (fast, offline), plus the released IDEs we claim to support.
+    pluginVerification {
+        ides {
+            val localPath = providers.gradleProperty("platformLocalPath").orNull
+            if (localPath != null && file(localPath).exists() && providers.gradleProperty("verifyLocalOnly").isPresent) {
+                local(localPath)
+            } else {
+                create(
+                    providers.gradleProperty("platformType"),
+                    providers.gradleProperty("platformVersion"),
+                )
+                create(org.jetbrains.intellij.platform.gradle.IntelliJPlatformType.IntellijIdea, providers.gradleProperty("platformVersion"))
+            }
+        }
+    }
+
     buildSearchableOptions = false
     instrumentCode = false
 }
@@ -58,7 +93,7 @@ intellijPlatform {
 /*
  * Cedar SDK: cedar-wasm (Rust) compiled to wasm32-wasip1, executed in the JVM by Chicory.
  */
-val cargoBuild by tasks.registering(Exec::class) {
+val cargoBuild = tasks.register<Exec>("cargoBuild") {
     group = "build"
     description = "Builds the Cedar SDK wasm module with cargo."
     val crate = layout.projectDirectory.dir("cedar-wasm")
@@ -72,13 +107,21 @@ val cargoBuild by tasks.registering(Exec::class) {
     )
 }
 
-val cedarWasm by tasks.registering(Copy::class) {
+val cedarWasm = tasks.register<Copy>("cedarWasm") {
     from(cargoBuild) { rename { "cedar.wasm" } }
     into(layout.buildDirectory.dir("generated/cedar-wasm/cedar"))
 }
 
+/** Plugin id/version for the About command (upstream reads package.json). */
+val pluginInfo = tasks.register<WriteProperties>("pluginInfo") {
+    destinationFile = layout.buildDirectory.file("generated/plugin-info/cedar/plugin.properties")
+    property("id", "io.github.thefellow.cedar")
+    property("version", providers.gradleProperty("pluginVersion"))
+}
+
 sourceSets.main {
     resources.srcDir(cedarWasm.map { layout.buildDirectory.dir("generated/cedar-wasm").get() })
+    resources.srcDir(pluginInfo.map { layout.buildDirectory.dir("generated/plugin-info").get() })
 }
 
 tasks {

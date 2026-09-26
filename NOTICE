@@ -4,3 +4,9 @@ This project is a semantic port of cedar-policy/vscode-cedar
 (https://github.com/cedar-policy/vscode-cedar), Copyright Cedar Contributors, licensed under the
 Apache License, Version 2.0. Grammars (src/main/resources/syntaxes), icons, test data (testdata/) and the
 Cedar SDK bindings (cedar-wasm/) are derived from that project.
+
+Bundled third-party software:
+- Cedar (cedar-policy, cedar-policy-core, cedar-policy-formatter), https://github.com/cedar-policy/cedar,
+  Apache License 2.0, compiled into the plugin's WebAssembly module together with its Rust dependencies
+  (see cedar-wasm/Cargo.lock).
+- Chicory WebAssembly runtime, https://github.com/dylibso/chicory, Apache License 2.0.

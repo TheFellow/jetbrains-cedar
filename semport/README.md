@@ -93,6 +93,7 @@ Neither driver pushes. Scratch files go under ignored `.ai/`.
 
 | Upstream change | Port |
 | --- | --- |
+| Upstream version bump (`package.json` `version`) | `pluginVersion` in `gradle.properties` (drop any fourth component) and a `CHANGELOG.md` section mirroring upstream's entry; release by tagging `v<version>`. |
 | Cedar SDK bump (`vscode-cedar-wasm/Cargo.toml`) | `cedar-wasm/Cargo.toml` + `cargo update -p cedar-policy --precise <v>` (and the other cedar crates); fix any API drift in `cedar-wasm/src/*.rs`; bump `pluginVersion` if upstream bumped its version. |
 | `vscode-cedar-wasm/src/*.rs` logic | Same file under `cedar-wasm/src/` (keep structure; results are JSON-serialized). |
 | `syntaxes/*.json` | Copy verbatim to `src/main/resources/syntaxes/`; port changed cases of `src/test/suite/tmgrammar.test.ts` to `TmGrammarTest.kt`. |
