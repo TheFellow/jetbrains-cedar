@@ -144,8 +144,7 @@ class CedarEntitiesJSONCompletionItemProvider(private val workspace: Workspace) 
         if (isTopLevelJSON(document, position)) {
             val schemaDoc = getSchemaTextDocument(workspace, document)
             if (schemaDoc != null) {
-                // upstream: createDiagnosticCollection()
-                if (validateSchemaDoc(schemaDoc, DiagnosticCollection("Cedar"))) {
+                if (validateSchemaDoc(workspace, schemaDoc, createDiagnosticCollection())) {
                     val schema = parseCedarSchemaDoc(schemaDoc)
                     val entityTypes = schema.entityTypes
 
@@ -237,7 +236,7 @@ fun addEntitiesJSON(
 
     val schemaDoc = getSchemaTextDocument(workspace, document)
     if (schemaDoc != null) {
-        if (validateSchemaDoc(schemaDoc, diagnosticCollection)) {
+        if (validateSchemaDoc(workspace, schemaDoc, diagnosticCollection)) {
             val schema = parseCedarSchemaDoc(schemaDoc)
             val entityTypes = schema.entityTypes
             val items = entityTypes.map { etype -> QuickPickItem(label = etype) }

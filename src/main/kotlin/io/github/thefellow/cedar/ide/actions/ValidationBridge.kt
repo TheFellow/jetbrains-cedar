@@ -28,5 +28,9 @@ object ValidationBridge {
     fun clearProblems(project: Project) = CedarValidationService.getInstance(project).clearProblems()
 
     /** addEntitiesJSON(textEditor, diagnosticCollection) */
-    fun addEntities(project: Project, editor: Editor): Unit = TODO("wired at merge")
+    fun addEntities(project: Project, editor: Editor) {
+        io.github.thefellow.cedar.ide.completion.addEntitiesJson(
+            project, editor, CedarValidationService.getInstance(project).diagnosticCollection,
+        )
+    }
 }
