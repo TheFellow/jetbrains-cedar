@@ -95,10 +95,12 @@ class CedarSettingsChangeListener(private val project: Project) : CedarSettingsL
     override fun settingsChanged() {
         ApplicationManager.getApplication().executeOnPooledThread {
             if (project.isDisposed) return@executeOnPooledThread
+            val service = CedarValidationService.getInstance(project)
+            service.resetMessages()
             // no need to await to invoke vscode.window.showErrorMessage
-            getSchemaTextDocument(CedarValidationService.getInstance(project).workspace)
+            getSchemaTextDocument(service.userWorkspace)
             clearValidationCache()
-            DaemonCodeAnalyzer.getInstance(project).restart()
+            DaemonCodeAnalyzer.getInstance(project).restart("Cedar settings changed")
         }
     }
 }

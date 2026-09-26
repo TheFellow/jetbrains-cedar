@@ -3,6 +3,7 @@
 
 package io.github.thefellow.cedar.ide.navigation
 
+import io.github.thefellow.cedar.ide.validation.CedarValidationService
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.lang.ASTNode
 import com.intellij.lang.annotation.AnnotationHolder
@@ -53,7 +54,7 @@ class CedarGotoDeclarationHandler : GotoDeclarationHandler {
         val provider = CedarProviders.definitionProvider(file) ?: return null
         val project = psiFile.project
         val doc = IdeTextDocument.of(file) ?: return null
-        val location = provider.provideDefinition(IdeWorkspace.getInstance(project), doc, offset.toPosition(doc.document))
+        val location = provider.provideDefinition(CedarValidationService.getInstance(project).quietWorkspace, doc, offset.toPosition(doc.document))
             ?: return null
         val targetFile = virtualFileOf(location.uri) ?: return null
         val targetPsi = PsiManager.getInstance(project).findFile(targetFile) ?: return null

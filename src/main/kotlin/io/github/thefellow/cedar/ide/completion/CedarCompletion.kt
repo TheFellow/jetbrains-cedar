@@ -3,6 +3,7 @@
 
 package io.github.thefellow.cedar.ide.completion
 
+import io.github.thefellow.cedar.ide.validation.CedarValidationService
 import com.intellij.codeInsight.AutoPopupController
 import com.intellij.codeInsight.completion.CompletionContributor
 import com.intellij.codeInsight.completion.CompletionParameters
@@ -144,7 +145,7 @@ class CedarCompletionContributor : CompletionContributor() {
         val document = documentOf(parameters) ?: return
         val position = parameters.offset.toPosition(parameters.editor.document)
         val context = completionContext(parameters, CEDAR_TRIGGER_CHARACTERS)
-        val items = CedarCompletionItemProvider(IdeWorkspace.getInstance(project))
+        val items = CedarCompletionItemProvider(CedarValidationService.getInstance(project).quietWorkspace)
             .provideCompletionItems(document, position, context) ?: return
         addItems(project, parameters.editor.document, parameters.offset, items, result)
         if (items.isNotEmpty()) result.stopHere()
@@ -172,7 +173,7 @@ class CedarEntitiesJsonCompletionContributor : CompletionContributor() {
         val project = parameters.editor.project ?: return
         val document = documentOf(parameters) ?: return
         val position = parameters.offset.toPosition(parameters.editor.document)
-        val items = CedarEntitiesJSONCompletionItemProvider(IdeWorkspace.getInstance(project))
+        val items = CedarEntitiesJSONCompletionItemProvider(CedarValidationService.getInstance(project).quietWorkspace)
             .provideCompletionItems(document, position)
         addItems(project, parameters.editor.document, parameters.offset, items, result)
     }

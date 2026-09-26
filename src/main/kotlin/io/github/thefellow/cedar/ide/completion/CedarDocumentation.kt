@@ -3,6 +3,7 @@
 
 package io.github.thefellow.cedar.ide.completion
 
+import io.github.thefellow.cedar.ide.validation.CedarValidationService
 import com.intellij.model.Pointer
 import com.intellij.openapi.project.Project
 import com.intellij.platform.backend.documentation.DocumentationResult
@@ -37,13 +38,15 @@ class CedarHoverDocumentationTarget(private val project: Project, private val ti
  */
 class CedarDocumentationTargetProvider : DocumentationTargetProvider {
     override fun documentationTargets(file: PsiFile, offset: Int): List<DocumentationTarget> {
+        val name = file.viewProvider.virtualFile.name
+        val isEntities = io.github.thefellow.cedar.core.isCedarEntitiesFile(name)
+        if (file.language != CedarLanguage && !isEntities) return emptyList()
         val document = IdeTextDocument.of(file) ?: return emptyList()
         val position = document.positionAt(offset)
-        val name = file.viewProvider.virtualFile.name
         val hover = when {
             file.language == CedarLanguage ->
-                CedarHoverProvider(IdeWorkspace.getInstance(file.project)).provideHover(document, position)
-            io.github.thefellow.cedar.core.isCedarEntitiesFile(name) ->
+                CedarHoverProvider(CedarValidationService.getInstance(file.project).quietWorkspace).provideHover(document, position)
+            isEntities ->
                 CedarEntitiesJSONHoverProvider().provideHover(document, position)
             else -> null
         } ?: return emptyList()

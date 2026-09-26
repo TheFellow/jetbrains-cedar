@@ -49,6 +49,11 @@ class CedarValidationAnnotator :
         collectInformation(file)
 
     override fun collectInformation(file: PsiFile): Info? {
+        // cheap pre-check on the name/language before snapshotting the document
+        val name = file.viewProvider.virtualFile.name
+        val candidate = file.language.id == "cedar" || file.language.id == "cedarschema" ||
+            name.endsWith("cedarschema.json") || name.endsWith("cedarentities.json")
+        if (!candidate) return null
         val doc = IdeTextDocument.of(file) ?: return null
         val relevant = doc.languageId == "cedar" || detectSchemaDoc(doc) || detectEntitiesDoc(doc)
         return if (relevant) Info(file.project, doc) else null
@@ -78,7 +83,7 @@ class CedarValidationAnnotator :
                 .tooltip(tooltip(diagnostic))
             if (afterEndOfLine) builder = builder.afterEndOfLine()
             quickFixes?.invoke(result.doc, diagnostic.range, CodeActionContext(listOf(diagnostic)))
-                ?.forEach { action -> builder = builder.withFix(CodeActionIntention(action)) }
+                ?.forEach { action -> builder = builder.withFix(CodeActionIntention(action, result.doc.version)) }
             builder.create()
         }
     }
@@ -107,11 +112,15 @@ class CedarValidationAnnotator :
     }
 }
 
-/** An upstream CodeAction (quick fix): applies its WorkspaceEdit, then runs its validate command. */
-class CodeActionIntention(private val action: CodeAction) : IntentionAction, PriorityAction {
+/**
+ * An upstream CodeAction (quick fix): applies its WorkspaceEdit, then runs its validate command. The edit's
+ * ranges refer to the document at [documentVersion]; the fix is unavailable once the document has changed.
+ */
+class CodeActionIntention(private val action: CodeAction, private val documentVersion: Long) : IntentionAction, PriorityAction {
     override fun getText() = action.title
     override fun getFamilyName() = "Cedar"
-    override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?) = file != null
+    override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?) =
+        file?.viewProvider?.document?.modificationStamp == documentVersion
     override fun startInWriteAction() = false
     override fun getPriority() = if (action.isPreferred) PriorityAction.Priority.TOP else PriorityAction.Priority.NORMAL
     override fun generatePreview(project: Project, editor: Editor, file: PsiFile): IntentionPreviewInfo =
@@ -120,6 +129,7 @@ class CodeActionIntention(private val action: CodeAction) : IntentionAction, Pri
     override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
         val psiFile = file ?: return
         val document = psiFile.viewProvider.document ?: return
+        if (document.modificationStamp != documentVersion) return
         val edits = action.edit?.edits?.values?.flatten().orEmpty()
         WriteCommandAction.runWriteCommandAction(project, action.title, null, {
             edits.map { it.range.toTextRange(document) to it.newText }

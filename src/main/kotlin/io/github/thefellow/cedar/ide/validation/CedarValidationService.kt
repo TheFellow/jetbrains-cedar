@@ -5,7 +5,13 @@ package io.github.thefellow.cedar.ide.validation
 
 import com.intellij.application.options.CodeStyle
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.editor.Document
+import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.fileEditor.FileDocumentManagerListener
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.problems.WolfTheProblemSolver
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
@@ -19,11 +25,13 @@ import io.github.thefellow.cedar.core.clearValidationCache
 import io.github.thefellow.cedar.core.validationCache
 import io.github.thefellow.cedar.ide.adapters.IdeTextDocument
 import io.github.thefellow.cedar.ide.adapters.IdeWorkspace
+import io.github.thefellow.cedar.ide.adapters.uriOf
 import io.github.thefellow.cedar.ide.adapters.virtualFileOf
 import io.github.thefellow.cedar.ide.lang.CedarFileType
 import io.github.thefellow.cedar.ide.lang.CedarLanguage
 import io.github.thefellow.cedar.vscode.Diagnostic
 import io.github.thefellow.cedar.vscode.DiagnosticCollection
+import io.github.thefellow.cedar.vscode.DiagnosticSeverity
 import io.github.thefellow.cedar.vscode.TextDocument
 import io.github.thefellow.cedar.vscode.Uri
 import io.github.thefellow.cedar.vscode.Workspace
@@ -41,9 +49,23 @@ import io.github.thefellow.cedar.core.validateTextDocument as coreValidateTextDo
  * dependent results) restart highlighting of those files.
  */
 @Service(Service.Level.PROJECT)
-class CedarValidationService(private val project: Project) {
-    /** VS Code collapses repeated identical notifications; the daemon re-runs often, so do the same. */
-    val workspace: Workspace = DedupingWorkspace(IdeWorkspace.getInstance(project))
+class CedarValidationService(private val project: Project) : Disposable {
+    /**
+     * For user-initiated commands: messages are always shown, as upstream does.
+     */
+    val userWorkspace: Workspace = IdeWorkspace.getInstance(project)
+
+    /**
+     * For validation on the highlighting daemon. Upstream shows messages on open/save; the daemon runs on every
+     * edit, so each distinct message is shown once until settings change or problems are cleared.
+     */
+    val workspace: Workspace = DedupingWorkspace(userWorkspace)
+
+    /** For completion, hover and navigation, which upstream runs without surfacing schema lookup errors twice. */
+    val quietWorkspace: Workspace = QuietWorkspace(userWorkspace)
+
+    /** Documents whose problems were cleared (`cedar.clearproblems`), by uri, at their version when cleared. */
+    private val cleared = ConcurrentHashMap<Uri, Long>()
 
     val diagnosticCollection: DiagnosticCollection = createDiagnosticCollection().also { collection ->
         collection.onChange = { uris -> onDiagnosticsChanged(uris) }
@@ -54,9 +76,22 @@ class CedarValidationService(private val project: Project) {
 
     init {
         installRevalidateHook()
+        // upstream re-validates on save: a save ends the "cleared" state
+        project.messageBus.connect(this).subscribe(FileDocumentManagerListener.TOPIC, object : FileDocumentManagerListener {
+            override fun beforeDocumentSaving(document: Document) {
+                val file = FileDocumentManager.getInstance().getFile(document) ?: return
+                if (cleared.remove(uriOf(file)) != null) restartHighlighting(project, uriOf(file))
+            }
+        })
     }
 
+    override fun dispose() {}
+
+    /** Forget which messages were already shown by the daemon. */
+    fun resetMessages() = (workspace as DedupingWorkspace).reset()
+
     private fun onDiagnosticsChanged(uris: Collection<Uri>) {
+        reportProblemFiles(uris)
         for (uri in uris) {
             val signature = diagnosticCollection.get(uri)?.map { "${it.severity}|${it.range}|${it.code}|${it.message}" }
             val previous = if (signature == null) lastSignature.remove(uri) else lastSignature.put(uri, signature)
@@ -67,8 +102,33 @@ class CedarValidationService(private val project: Project) {
         }
     }
 
+    /**
+     * Upstream publishes diagnostics to the Problems view even for files that aren't open (e.g. an invalid schema
+     * found while validating a policy). Mark such files as problem files (red in the Project view, listed under
+     * Problems | Project Errors).
+     */
+    private fun reportProblemFiles(uris: Collection<Uri>) {
+        if (project.isDisposed) return
+        val updates = uris.mapNotNull { uri ->
+            virtualFileOf(uri)?.let { it to (diagnosticCollection.get(uri)?.any { d -> d.severity == DiagnosticSeverity.Error } == true) }
+        }
+        if (updates.isEmpty()) return
+        ApplicationManager.getApplication().invokeLater({
+            val wolf = WolfTheProblemSolver.getInstance(project)
+            for ((file, hasErrors) in updates) {
+                if (!file.isValid) continue
+                if (hasErrors) wolf.reportProblemsFromExternalSource(file, this) else wolf.clearProblemsFromExternalSource(file, this)
+            }
+        }, project.disposed)
+    }
+
     /** Runs upstream `validateTextDocument` for [doc] and returns the diagnostics to render for it. */
     fun annotate(doc: TextDocument): List<Diagnostic> {
+        val clearedAt = cleared[doc.uri]
+        if (clearedAt != null) {
+            if (clearedAt == doc.version) return emptyList()
+            cleared.remove(doc.uri) // edited since: validate again
+        }
         annotating.set(doc.uri)
         try {
             coreValidateTextDocument(workspace, doc, diagnosticCollection)
@@ -89,25 +149,45 @@ class CedarValidationService(private val project: Project) {
     fun validateCedarDoc(file: VirtualFile, userInitiated: Boolean = true): Boolean =
         IdeTextDocument.of(file)?.let { validateCedarDoc(it, userInitiated) } ?: false
 
-    fun validateCedarDoc(doc: TextDocument, userInitiated: Boolean = false): Boolean =
-        coreValidateCedarDoc(workspace, doc, diagnosticCollection, userInitiated)
+    fun validateCedarDoc(doc: TextDocument, userInitiated: Boolean = false): Boolean {
+        if (userInitiated) cleared.remove(doc.uri)
+        return coreValidateCedarDoc(workspaceFor(userInitiated), doc, diagnosticCollection, userInitiated)
+    }
+
+    private fun workspaceFor(userInitiated: Boolean) = if (userInitiated) userWorkspace else workspace
 
     /** `cedar.schemavalidate` */
     fun validateSchemaDoc(file: VirtualFile, userInitiated: Boolean = true): Boolean =
         IdeTextDocument.of(file)?.let { validateSchemaDoc(it, userInitiated) } ?: false
 
-    fun validateSchemaDoc(doc: TextDocument, userInitiated: Boolean = false): Boolean =
-        coreValidateSchemaDoc(workspace, doc, diagnosticCollection, userInitiated)
+    fun validateSchemaDoc(doc: TextDocument, userInitiated: Boolean = false): Boolean {
+        if (userInitiated) cleared.remove(doc.uri)
+        return coreValidateSchemaDoc(workspaceFor(userInitiated), doc, diagnosticCollection, userInitiated)
+    }
 
     /** `cedar.entitiesvalidate` */
     fun validateEntitiesDoc(file: VirtualFile, userInitiated: Boolean = true): Boolean =
         IdeTextDocument.of(file)?.let { validateEntitiesDoc(it, userInitiated) } ?: false
 
-    fun validateEntitiesDoc(doc: TextDocument, userInitiated: Boolean = false): Boolean =
-        coreValidateEntitiesDoc(workspace, doc, diagnosticCollection, userInitiated)
+    fun validateEntitiesDoc(doc: TextDocument, userInitiated: Boolean = false): Boolean {
+        if (userInitiated) cleared.remove(doc.uri)
+        return coreValidateEntitiesDoc(workspaceFor(userInitiated), doc, diagnosticCollection, userInitiated)
+    }
 
     /** `cedar.clearproblems` */
     fun clearProblems() {
+        // upstream: problems stay cleared until the document is next validated (on open/save); the daemon would
+        // re-validate immediately, so remember each open document's version and skip it until edited or saved
+        for (file in FileEditorManager.getInstance(project).openFiles) {
+            val document = FileDocumentManager.getInstance().getCachedDocument(file) ?: continue
+            cleared[uriOf(file)] = document.modificationStamp
+        }
+        diagnosticCollection.forEach { uri, _ ->
+            val file = virtualFileOf(uri) ?: return@forEach
+            val document = FileDocumentManager.getInstance().getCachedDocument(file) ?: return@forEach
+            cleared[uri] = document.modificationStamp
+        }
+        resetMessages()
         diagnosticCollection.clear()
         clearValidationCache()
     }
@@ -129,10 +209,10 @@ class CedarValidationService(private val project: Project) {
             if (ApplicationManager.getApplication().isUnitTestMode) return
             val file = virtualFileOf(uri) ?: return
             ApplicationManager.getApplication().invokeLater({
-                val psiFile = ReadAction.compute<PsiFile?, RuntimeException> {
+                val psiFile = ReadAction.computeBlocking<PsiFile?, RuntimeException> {
                     if (file.isValid) PsiManager.getInstance(project).findFile(file) else null
                 } ?: return@invokeLater
-                DaemonCodeAnalyzer.getInstance(project).restart(psiFile)
+                DaemonCodeAnalyzer.getInstance(project).restart(psiFile, "Cedar diagnostics changed")
             }, project.disposed)
         }
 
@@ -156,22 +236,18 @@ class CedarValidationService(private val project: Project) {
     }
 }
 
-/** Suppresses an identical error/info message shown again within a short window. */
+/** Shows each distinct error/info message once, until [reset]. */
 private class DedupingWorkspace(private val delegate: Workspace) : Workspace by delegate {
-    private val shown = ConcurrentHashMap<String, Long>()
+    private val shown = ConcurrentHashMap.newKeySet<String>()
 
-    private fun once(message: String, show: () -> Unit) {
-        val now = System.currentTimeMillis()
-        val last = shown[message]
-        if (last != null && now - last < WINDOW_MS) return
-        shown[message] = now
-        show()
-    }
+    fun reset() = shown.clear()
 
-    override fun showErrorMessage(message: String) = once(message) { delegate.showErrorMessage(message) }
-    override fun showInformationMessage(message: String) = once(message) { delegate.showInformationMessage(message) }
+    override fun showErrorMessage(message: String) { if (shown.add(message)) delegate.showErrorMessage(message) }
+    override fun showInformationMessage(message: String) { if (shown.add(message)) delegate.showInformationMessage(message) }
+}
 
-    companion object {
-        const val WINDOW_MS = 30_000L
-    }
+/** Never shows messages (lookups done for completion, hover and navigation). */
+private class QuietWorkspace(delegate: Workspace) : Workspace by delegate {
+    override fun showErrorMessage(message: String) {}
+    override fun showInformationMessage(message: String) {}
 }
