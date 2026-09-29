@@ -7,37 +7,37 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v2
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5
       - name: Cedar SDK bridge tests
         run: cargo test --manifest-path cedar-wasm/Cargo.toml --release --locked
       - name: Plugin tests, build and verification
         run: ./gradlew test buildPlugin verifyPluginStructure
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: plugin
           path: build/distributions/*.zip
 
   verify:
     # JetBrains Plugin Verifier against GoLand and IntelliJ IDEA (what the Marketplace checks on upload)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v2
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5
       - name: Plugin Verifier
         run: ./gradlew verifyPlugin
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: plugin-verifier-report
           path: build/reports/pluginVerifier
 
   semport-integrity:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Ledger tests and append-only guard
