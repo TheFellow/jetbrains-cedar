@@ -31,7 +31,8 @@ Arguments: an optional maximum number of upstream commits to process (default: u
    breadcrumb and continue with step 5 using its plan.
 5. **If PORT: implement** (fresh agent). It implements only this commit's delta, keeping ported modules near
    line-for-line with upstream (same names, comments, TODOs), adds/ports tests, and must not touch ledger or
-   breadcrumbs. Then run `scripts/semport_scope.sh` and `scripts/semport_validate.sh` (report in
+   breadcrumbs. If the delta touches code marked `DIVERGENCE (semport/DIVERGENCES.md#...)`, follow
+   `semport/DIVERGENCES.md` (retire the patch if upstream now fixes it, otherwise keep it). Then run `scripts/semport_scope.sh` and `scripts/semport_validate.sh` (report in
    `.ai/semport_validation.md`). On failure allow ONE focused repair round, then re-validate.
 6. **Review** (a *different* fresh agent): behavioral parity with the upstream commit (messages, ranges, edge cases),
    fidelity of structure, IntelliJ threading rules, cache thread-safety, JS-vs-Java regex differences, tests.

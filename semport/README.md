@@ -10,6 +10,8 @@ Every reachable commit up to there is a `baseline` event in `ledger.tsv`. Later 
 discovered and processed one at a time in topology-safe, oldest-first order.
 
 [`MAPPING.md`](MAPPING.md) maps every upstream file to its counterpart here.
+[`DIVERGENCES.md`](DIVERGENCES.md) lists deliberate differences from upstream (upstream bugs fixed here first)
+and how to retire them when upstream catches up.
 
 ## Ledger model
 

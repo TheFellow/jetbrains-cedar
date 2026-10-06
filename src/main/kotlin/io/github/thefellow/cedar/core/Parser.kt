@@ -1338,6 +1338,19 @@ private val IN_REGEX = Regex(""" in\s+(([_a-zA-Z][_a-zA-Z0-9]*::)*[_a-zA-Z][_a-z
 private val ATTRIBUTE_DECL_REGEX =
     Regex("""^\s*(?:("[^"]+"|[_a-zA-Z][_a-zA-Z0-9]*))[?]?\s*:\s*(?:Set\s*<\s*)?(?<type>([_a-zA-Z][_a-zA-Z0-9]*::)*[_a-zA-Z][_a-zA-Z0-9]*)\s*(?:\s*>\s*)?""")
 
+// DIVERGENCE (semport/DIVERGENCES.md#schema-annotation-values): upstream scans annotation values like
+// `@doc("one in Two")` as schema syntax, so ` in `, `[...]`, `:` and `//` inside them produce tokens and
+// references. Blank out the value (same length, so offsets are unchanged) before the line is scanned.
+private val ANNOTATION_VALUE_REGEX = Regex("""@[_a-zA-Z][_a-zA-Z0-9]*\s*\(\s*"((?:[^"\\]|\\.)*)"""")
+
+private fun maskAnnotationValues(textLine: String): String =
+    ANNOTATION_VALUE_REGEX.replace(textLine) { m ->
+        val value = m.groups[1]!!.range
+        m.value.substring(0, value.first - m.range.first) +
+            " ".repeat(value.last - value.first + 1) +
+            m.value.substring(value.last + 1 - m.range.first)
+    }
+
 private fun parseCedarSchemaCedarDoc(
     schemaDoc: TextDocument,
     visitSchema: ((schemaRange: SchemaRange, schemaText: String) -> Unit)? = null,
@@ -1415,7 +1428,7 @@ private fun parseCedarSchemaCedarDoc(
 
     var declarationStartLine = -1
     for (i in 0 until schemaDoc.lineCount) {
-        val textLine = schemaDoc.lineAt(i).text
+        val textLine = maskAnnotationValues(schemaDoc.lineAt(i).text)
         val commentPos = textLine.indexOf("//")
         var linePreComment = textLine
             .substring(0, if (commentPos > -1) commentPos else textLine.length)

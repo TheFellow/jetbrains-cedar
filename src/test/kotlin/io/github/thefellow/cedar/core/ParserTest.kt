@@ -129,4 +129,26 @@ class ParserTest {
         val result = parseCedarSchemaDoc(text(src, "e.cedarschema", "cedarschema"))
         assertEquals(listOf("red", "green"), result.definitionRanges.single { it.etype == "Color" }.enums)
     }
+
+    // Deliberate divergence from upstream: semport/DIVERGENCES.md#schema-annotation-values
+    @Test
+    fun schemaCedarAnnotationValuesAreNotScanned() {
+        val src = """
+            namespace Acme {
+                @doc("An organization in Acme")
+                entity Organization {
+                    @doc("pick one of [Team, Group] // name: Bogus")
+                    name: String,
+                };
+                @doc("see https://example.com") @id("x in Y")
+                entity Team in [Organization];
+            }
+        """.trimIndent()
+        val result = parseCedarSchemaDoc(text(src, "acme.cedarschema", "cedarschema"))
+        val lines = src.lines()
+        val tokenTexts = result.tokens.tokens.map { lines[it.range.start.line].substring(it.range.start.character, it.range.end.character) }
+        assertEquals(listOf("Organization", "Team", "Organization"), tokenTexts)
+        assertEquals(listOf("Acme::Organization"), result.referencedTypes.map { it.name })
+        assertEquals(Range(7, 20, 7, 32), result.referencedTypes.single().range)
+    }
 }

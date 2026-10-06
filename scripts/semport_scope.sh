@@ -5,7 +5,7 @@ set -euo pipefail
 status=0
 while IFS= read -r path; do
   case "$path" in
-    src/*|cedar-wasm/src/*|cedar-wasm/Cargo.toml|cedar-wasm/Cargo.lock|cedar-wasm/build.rs|testdata/*|docs/*|README.md|CHANGELOG.md|NOTICE|build.gradle.kts|gradle.properties|semport/MAPPING.md)
+    src/*|cedar-wasm/src/*|cedar-wasm/Cargo.toml|cedar-wasm/Cargo.lock|cedar-wasm/build.rs|testdata/*|docs/*|README.md|CHANGELOG.md|NOTICE|build.gradle.kts|gradle.properties|semport/MAPPING.md|semport/DIVERGENCES.md)
       ;;
     semport/ledger.tsv|semport/skipped/*|semport/wedged/*)
       echo "semport_scope: implementation stage changed stewardship-owned path: $path" >&2

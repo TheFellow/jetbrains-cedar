@@ -3,6 +3,10 @@
 Versions follow upstream [vscode-cedar](https://github.com/cedar-policy/vscode-cedar/blob/main/CHANGELOG.md).
 A fourth version component (e.g. `0.10.6.1`) marks plugin-only releases on top of an upstream version.
 
+## 0.10.6.2 - 2026-10-05
+
+- Cedar schema annotation values (e.g. `@doc("An organization in Acme")`) are no longer scanned as schema syntax, so text inside them no longer gets type highlighting or produces bogus type references
+
 ## 0.10.6.1 - 2026-09-25
 
 - Description states that this is an unofficial port of the VS Code extension
