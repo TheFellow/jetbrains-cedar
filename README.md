@@ -1,5 +1,8 @@
 # Cedar policy language for JetBrains IDEs
 
+[![JetBrains Marketplace](https://img.shields.io/jetbrains/plugin/v/34560-cedar.svg?label=JetBrains%20Marketplace)](https://plugins.jetbrains.com/plugin/34560-cedar)
+[![Downloads](https://img.shields.io/jetbrains/plugin/d/34560-cedar.svg)](https://plugins.jetbrains.com/plugin/34560-cedar)
+
 Cedar policy language support for IntelliJ-based IDEs (GoLand, IntelliJ IDEA, PyCharm, WebStorm, …):
 syntax highlighting, formatting, validation, completion and navigation.
 
@@ -14,6 +17,8 @@ those policies. See the [Cedar policy language reference guide](https://docs.ced
 The Cedar SDK (Rust) runs inside the IDE as WebAssembly on a pure-Java runtime ([Chicory](https://chicory.dev)),
 so validation, formatting and translation give the same results as the VS Code extension and the `cedar` CLI,
 with no native binaries.
+
+![Validating a Cedar policy against its schema, with a quick fix](docs/screenshot-validation.png)
 
 ## Features
 
@@ -67,9 +72,14 @@ Entity, Clear Problems, About, and Open docs.cedarpolicy.com.
 Formatting uses the Cedar code style (**Settings | Editor | Code Style | Cedar**): indent (default 4) and hard
 wrap column (default 80), matching VS Code's `editor.tabSize` / `editor.wordWrapColumn` defaults.
 
-## Install (sideload)
+## Install
 
 Requirements: an IntelliJ-based IDE **2026.2** or newer.
+
+Install **Cedar** from the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/34560-cedar), or in the IDE:
+**Settings | Plugins | Marketplace**, search for "Cedar", and install it.
+
+### Sideload
 
 1. Build the plugin (or download `plugin` from a CI run):
 
@@ -78,7 +88,7 @@ Requirements: an IntelliJ-based IDE **2026.2** or newer.
    ./gradlew buildPlugin
    ```
 
-   This produces `build/distributions/jetbrains-cedar-0.10.6.zip`.
+   This produces `build/distributions/jetbrains-cedar-<version>.zip`.
 2. In GoLand: **Settings | Plugins | ⚙ | Install Plugin from Disk…**, pick the zip, and restart the IDE.
 
 To try it without touching your IDE installation, `./gradlew runIde` opens a sandboxed GoLand with the plugin.
