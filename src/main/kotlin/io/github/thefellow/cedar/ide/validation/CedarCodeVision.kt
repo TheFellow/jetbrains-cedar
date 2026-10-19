@@ -9,6 +9,7 @@ import com.intellij.codeInsight.codeVision.CodeVisionRelativeOrdering
 import com.intellij.codeInsight.codeVision.ui.model.ClickableTextCodeVisionEntry
 import com.intellij.codeInsight.hints.codeVision.DaemonBoundCodeVisionProvider
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiFile
@@ -45,7 +46,7 @@ class CedarSchemaCodeVisionProvider : DaemonBoundCodeVisionProvider {
                 { _, clickedEditor ->
                     val project = clickedEditor.project ?: return@ClickableTextCodeVisionEntry
                     val schemaFile = schemaUri?.let { virtualFileOf(it) } ?: return@ClickableTextCodeVisionEntry
-                    OpenFileDescriptor(project, schemaFile).navigate(true)
+                    FileEditorManager.getInstance(project).openTextEditor(OpenFileDescriptor(project, schemaFile), true)
                 },
                 null,
                 command.title,

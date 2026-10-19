@@ -14,6 +14,7 @@ import com.intellij.lang.LanguageStructureViewBuilder
 import com.intellij.lang.PsiStructureViewFactory
 import com.intellij.navigation.ItemPresentation
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.psi.PsiFile
 import io.github.thefellow.cedar.ide.adapters.IdeTextDocument
@@ -78,7 +79,10 @@ private class CedarFileTreeElement(private val psiFile: PsiFile) : StructureView
         val doc = IdeTextDocument.of(psiFile) ?: return emptyArray()
         return symbols(doc).map { CedarSymbolTreeElement(psiFile, doc, it) }.toTypedArray()
     }
-    override fun navigate(requestFocus: Boolean) = psiFile.navigate(requestFocus)
+    override fun navigate(requestFocus: Boolean) {
+        val file = psiFile.virtualFile ?: return
+        FileEditorManager.getInstance(psiFile.project).openTextEditor(OpenFileDescriptor(psiFile.project, file), requestFocus)
+    }
     override fun canNavigate() = psiFile.canNavigate()
     override fun canNavigateToSource() = psiFile.canNavigateToSource()
 }
@@ -104,7 +108,8 @@ class CedarSymbolTreeElement(
         symbol.children.map { CedarSymbolTreeElement(psiFile, doc, it) }.toTypedArray()
 
     override fun navigate(requestFocus: Boolean) {
-        OpenFileDescriptor(psiFile.project, doc.file, selectionOffset).navigate(requestFocus)
+        FileEditorManager.getInstance(psiFile.project)
+            .openTextEditor(OpenFileDescriptor(psiFile.project, doc.file, selectionOffset), requestFocus)
     }
     override fun canNavigate() = true
     override fun canNavigateToSource() = true

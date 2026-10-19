@@ -47,7 +47,7 @@ object JsonPreviews {
             }
         }!!
         refresh(source)
-        FileEditorManager.getInstance(project).openFile(preview, true)
+        openFile(project, preview)
     }
 
     /** Upstream fires onDidChange for the virtual uri when the source document is saved. */

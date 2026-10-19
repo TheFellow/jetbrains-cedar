@@ -10,6 +10,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.WriteAction
 import com.intellij.openapi.fileChooser.FileChooserFactory
 import com.intellij.openapi.fileChooser.FileSaverDescriptor
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
@@ -39,7 +40,9 @@ internal fun writeLocalFile(path: String, text: String): VirtualFile? = WriteAct
     vf
 }
 
-internal fun openFile(project: Project, file: VirtualFile) = OpenFileDescriptor(project, file).navigate(true)
+internal fun openFile(project: Project, file: VirtualFile) {
+    FileEditorManager.getInstance(project).openTextEditor(OpenFileDescriptor(project, file), true)
+}
 
 /** cedar.export: `resourceScheme == file && editorLangId == cedar` */
 class ExportPolicyAction : CedarAction() {

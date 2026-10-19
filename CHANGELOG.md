@@ -3,6 +3,10 @@
 Versions follow upstream [vscode-cedar](https://github.com/cedar-policy/vscode-cedar/blob/main/CHANGELOG.md).
 A fourth version component (e.g. `0.10.6.1`) marks plugin-only releases on top of an upstream version.
 
+## 0.10.6.3 - 2026-10-19
+
+- Opening files and navigating to symbols no longer uses deprecated or override-only IntelliJ Platform API
+
 ## 0.10.6.2 - 2026-10-05
 
 - Cedar schema annotation values (e.g. `@doc("An organization in Acme")`) are no longer scanned as schema syntax, so text inside them no longer gets type highlighting or produces bogus type references

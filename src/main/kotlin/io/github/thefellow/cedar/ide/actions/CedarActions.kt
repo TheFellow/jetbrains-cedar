@@ -14,7 +14,6 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
@@ -136,7 +135,7 @@ class SchemaOpenAction : CedarAction() {
         if (fileUri != null) {
             val schemaFile = virtualFileOf(fileUri)
             if (schemaFile != null) {
-                OpenFileDescriptor(ctx.project, schemaFile).navigate(true)
+                openFile(ctx.project, schemaFile)
             } else {
                 ctx.workspace.showErrorMessage("Cannot open Cedar schema file: $fileUri")
             }
