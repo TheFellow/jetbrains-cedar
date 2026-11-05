@@ -39,14 +39,16 @@ class CedarSchemaCodeVisionProvider : DaemonBoundCodeVisionProvider {
         val lineEnd = if (document.lineCount > 0) document.getLineEndOffset(0) else 0
         return ValidateWithSchemaCodeLensProvider().provideCodeLenses(workspace, doc).mapNotNull { lens ->
             val command = lens.command ?: return@mapNotNull null
-            val schemaUri = command.arguments.firstOrNull() as? Uri
+            val schemaUris = command.arguments.filterIsInstance<Uri>()
             val entry = ClickableTextCodeVisionEntry(
                 command.title,
                 id,
                 { _, clickedEditor ->
                     val project = clickedEditor.project ?: return@ClickableTextCodeVisionEntry
-                    val schemaFile = schemaUri?.let { virtualFileOf(it) } ?: return@ClickableTextCodeVisionEntry
-                    FileEditorManager.getInstance(project).openTextEditor(OpenFileDescriptor(project, schemaFile), true)
+                    // several when schemas are combined (semport/DIVERGENCES.md#multiple-schema-files)
+                    for (schemaFile in schemaUris.mapNotNull { virtualFileOf(it) }) {
+                        FileEditorManager.getInstance(project).openTextEditor(OpenFileDescriptor(project, schemaFile), true)
+                    }
                 },
                 null,
                 command.title,

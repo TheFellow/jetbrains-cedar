@@ -15,6 +15,21 @@ import io.github.thefellow.cedar.vscode.Workspace
 class ValidateWithSchemaCodeLensProvider {
     fun provideCodeLenses(workspace: Workspace, document: TextDocument): List<CodeLens> {
         val schemaDoc = getSchemaTextDocument(workspace, document)
+        // DIVERGENCE (semport/DIVERGENCES.md#multiple-schema-files): list every combined schema
+        if (schemaDoc is CombinedSchemaDocument) {
+            val folder = workspace.getWorkspaceFolder(document.uri)
+            val names = schemaDoc.parts.map { part ->
+                val path = part.uri.fsPath
+                if (folder != null && path.startsWith(folder.fsPath + "/")) path.jsSubstring(folder.fsPath.length + 1) else path
+            }
+            val openCommand = Command(
+                command = "vscode.open",
+                title = "Validated using ${names.joinToString(", ")}",
+                tooltip = "Open ${schemaDoc.parts[0].uri.fsPath}",
+                arguments = schemaDoc.parts.map { it.uri },
+            )
+            return listOf(CodeLens(Range(0, 0, 0, 0), openCommand))
+        }
         if (schemaDoc != null) {
             var schemaFileName = schemaDoc.uri.fsPath
             val folder = workspace.getWorkspaceFolder(document.uri)

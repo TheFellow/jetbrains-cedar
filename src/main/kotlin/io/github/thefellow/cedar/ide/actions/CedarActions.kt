@@ -20,7 +20,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 import io.github.thefellow.cedar.core.detectEntitiesDoc
-import io.github.thefellow.cedar.core.getSchemaUri
+import io.github.thefellow.cedar.core.getSchemaUris
 import io.github.thefellow.cedar.ide.adapters.IdeTextDocument
 import io.github.thefellow.cedar.ide.adapters.IdeWorkspace
 import io.github.thefellow.cedar.ide.adapters.languageIdOf
@@ -131,13 +131,16 @@ class SchemaOpenAction : CedarAction() {
     override fun perform(e: AnActionEvent, ctx: CedarActionContext?) {
         ctx ?: return
         val doc = ctx.document() ?: return
-        val fileUri = getSchemaUri(ctx.workspace, doc)
-        if (fileUri != null) {
-            val schemaFile = virtualFileOf(fileUri)
-            if (schemaFile != null) {
-                openFile(ctx.project, schemaFile)
-            } else {
-                ctx.workspace.showErrorMessage("Cannot open Cedar schema file: $fileUri")
+        // DIVERGENCE (semport/DIVERGENCES.md#multiple-schema-files): open every configured schema
+        val fileUris = getSchemaUris(ctx.workspace, doc)
+        if (fileUris.isNotEmpty()) {
+            for (fileUri in fileUris) {
+                val schemaFile = virtualFileOf(fileUri)
+                if (schemaFile != null) {
+                    openFile(ctx.project, schemaFile)
+                } else {
+                    ctx.workspace.showErrorMessage("Cannot open Cedar schema file: $fileUri")
+                }
             }
         } else {
             ctx.workspace.showErrorMessage("Cedar schema file not found or configured in settings.json")

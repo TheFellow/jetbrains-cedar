@@ -13,6 +13,12 @@ interface Workspace {
     /** `cedar.schemaFile` setting (relative to the first workspace folder), or empty. */
     val schemaFile: String
 
+    /**
+     * DIVERGENCE (semport/DIVERGENCES.md#multiple-schema-files): schema files and folders (relative to the first
+     * workspace folder). Defaults to [schemaFile] alone, i.e. upstream's single setting.
+     */
+    val schemaFiles: List<String> get() = listOf(schemaFile).filter { it.isNotEmpty() }
+
     /** `cedar.autodetectSchemaFile` setting. */
     val autodetectSchemaFile: Boolean
 

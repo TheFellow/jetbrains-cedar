@@ -81,6 +81,51 @@ class NavigationPlatformTest : BasePlatformTestCase() {
         )
     }
 
+    fun testSchemaFolding() {
+        copy("RFC82")
+        myFixture.configureFromTempProjectFile("RFC82/cedarschema")
+        val doc = myFixture.editor.document
+        com.intellij.testFramework.EditorTestUtil.buildInitialFoldingsInBackground(myFixture.editor)
+        val regions = myFixture.editor.foldingModel.allFoldRegions
+        // entity User = {..}, entity Document = {..}, appliesTo {..}; single-line `[User]` and `{}` don't fold
+        assertEquals(
+            listOf(1 to 3, 4 to 6, 7 to 11),
+            regions.map { doc.getLineNumber(it.startOffset) to doc.getLineNumber(it.endOffset) }.sortedBy { it.first },
+        )
+        assertEquals(listOf("{...}", "{...}", "{...}"), regions.sortedBy { it.startOffset }.map { it.placeholderText })
+    }
+
+    fun testSchemaFoldingNestedAndIgnoresStringsAndComments() {
+        myFixture.configureByText(
+            "test.cedarschema",
+            """
+            namespace App {
+              // a stray { in a comment
+              @doc("a stray [ in a string")
+              entity User = {
+                address: {
+                  city: String,
+                },
+              };
+              action view appliesTo {
+                principal: [
+                  User,
+                ],
+                resource: User,
+              };
+            }
+            """.trimIndent(),
+        )
+        val doc = myFixture.editor.document
+        com.intellij.testFramework.EditorTestUtil.buildInitialFoldingsInBackground(myFixture.editor)
+        val regions = myFixture.editor.foldingModel.allFoldRegions.sortedBy { it.startOffset }
+        assertEquals(
+            listOf(0 to 14, 3 to 7, 4 to 6, 8 to 13, 9 to 11),
+            regions.map { doc.getLineNumber(it.startOffset) to doc.getLineNumber(it.endOffset) },
+        )
+        assertEquals(listOf("{...}", "{...}", "{...}", "{...}", "[...]"), regions.map { it.placeholderText })
+    }
+
     private fun gotoTarget(textOnLine: String, word: String): Pair<VirtualFile, Int>? {
         val text = myFixture.editor.document.text
         val offset = text.indexOf(textOnLine).let { it + textOnLine.indexOf(word) + 1 }

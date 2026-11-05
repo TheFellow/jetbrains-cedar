@@ -8,6 +8,8 @@
 
         <!-- registerFoldingRangeProvider -->
         <lang.foldingBuilder language="cedar" implementationClass="io.github.thefellow.cedar.ide.navigation.CedarFoldingBuilder"/>
+        <!-- DIVERGENCE (semport/DIVERGENCES.md#schema-folding): no upstream provider for cedarschema -->
+        <lang.foldingBuilder language="cedarschema" implementationClass="io.github.thefellow.cedar.ide.navigation.CedarSchemaFoldingBuilder"/>
 
         <!-- registerDefinitionProvider -->
         <gotoDeclarationHandler implementation="io.github.thefellow.cedar.ide.navigation.CedarGotoDeclarationHandler"/>

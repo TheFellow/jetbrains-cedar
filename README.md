@@ -66,8 +66,13 @@ Entity, Clear Problems, About, and Open docs.cedarpolicy.com.
 
 **Settings | Tools | Cedar** (per project):
 
-- **Schema file**: the Cedar schema used for policy validation, relative to the project root (`cedar.schemaFile`).
-- **Auto detect Cedar schema file** (`cedar.autodetectSchemaFile`, on by default).
+- **Schema files**: the Cedar schemas used for policy validation, each a schema file or a folder of schema files,
+  relative to the project root or absolute (`cedar.schemaFile`, which takes a single file). With one schema file
+  this behaves like VS Code. With more than one schema, or a folder, all of them are combined into one schema and
+  used for every policy and entities file. A schema file may use types declared in another one. As within one
+  schema, a namespace may only be declared once: declaring it in a second file is an "already declared" error there.
+- **Auto detect Cedar schema file** (`cedar.autodetectSchemaFile`, on by default): used when no schema is
+  configured or a single schema file is; looks for exactly one schema in the policy's folder, then the project root.
 
 Formatting uses the Cedar code style (**Settings | Editor | Code Style | Cedar**): indent (default 4) and hard
 wrap column (default 80), matching VS Code's `editor.tabSize` / `editor.wordWrapColumn` defaults.

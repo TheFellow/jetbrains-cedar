@@ -84,4 +84,41 @@ class ValidationIdeTest : BasePlatformTestCase() {
         val errors = myFixture.doHighlighting(HighlightSeverity.ERROR)
         assertTrue(errors.joinToString { it.description }, errors.any { it.description.contains("should not exist according to the schema") })
     }
+
+    // semport/DIVERGENCES.md#multiple-schema-files
+    fun testSettingsMigrateTheSingleSchemaFile() {
+        val settings = io.github.thefellow.cedar.ide.settings.CedarSettings.getInstance(project)
+        try {
+            settings.loadState(io.github.thefellow.cedar.ide.settings.CedarSettingsState().apply { schemaFile = "old.cedarschema" })
+            assertEquals(listOf("old.cedarschema"), settings.schemaFiles)
+            assertEquals("old.cedarschema", settings.schemaFile)
+            settings.schemaFiles = listOf("a.cedarschema", " schemas ", "")
+            assertEquals(listOf("a.cedarschema", "schemas"), settings.schemaFiles)
+            assertEquals("", settings.schemaFile)
+            assertTrue(settings.state.schemaFile.isNullOrEmpty())
+        } finally {
+            settings.loadState(io.github.thefellow.cedar.ide.settings.CedarSettingsState())
+        }
+    }
+
+    fun testPolicyValidatedAgainstSeveralSchemas() {
+        val settings = io.github.thefellow.cedar.ide.settings.CedarSettings.getInstance(project)
+        try {
+            myFixture.addFileToProject("schemas/users.cedarschema", "namespace App { entity User in [Group]; entity Group; }")
+            myFixture.addFileToProject("schemas/docs.cedarschema", "namespace Docs { entity Doc { owner: App::User }; }")
+            myFixture.addFileToProject("billing.cedarschema.json", """{"Billing": {"entityTypes": {"Invoice": {}}, "actions": {}}}""")
+            // the light test project's root isn't the temp dir, so use absolute paths
+            val dir = myFixture.tempDirFixture.getFile(".")!!.path
+            settings.schemaFiles = listOf("$dir/schemas", "$dir/billing.cedarschema.json")
+            myFixture.configureByText(
+                "policy.cedar",
+                "permit (principal is App::User, action, resource is Docs::Doc) when { resource.owner == principal };\n" +
+                    "permit (principal is App::Nope, action, resource is Billing::Invoice);",
+            )
+            val errors = myFixture.doHighlighting(HighlightSeverity.ERROR)
+            assertEquals(errors.joinToString { it.description }, listOf("App::Nope"), errors.map { it.text }.distinct())
+        } finally {
+            settings.schemaFiles = emptyList()
+        }
+    }
 }

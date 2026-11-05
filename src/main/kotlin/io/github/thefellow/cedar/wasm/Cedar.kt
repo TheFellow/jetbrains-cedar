@@ -76,4 +76,15 @@ object Cedar {
 
     fun translateSchemaToJSON(cedar: String) =
         CedarWasm.call(TranslateSchemaResult::class.java, "translateSchemaToJSON", cedar)
+
+    // DIVERGENCE (semport/DIVERGENCES.md#multiple-schema-files): one fragment of a multi-file schema, with types
+    // left unresolved (they may be declared in another file)
+    fun validateSchemaFragmentCedar(schema: String) =
+        CedarWasm.call(ValidateSchemaResult::class.java, "validateSchemaFragmentCedar", schema)
+
+    fun validateSchemaFragmentJSON(schema: String) =
+        CedarWasm.call(ValidateSchemaResult::class.java, "validateSchemaFragmentJSON", schema)
+
+    fun translateSchemaFragmentToJSON(cedar: String) =
+        CedarWasm.call(TranslateSchemaResult::class.java, "translateSchemaFragmentToJSON", cedar)
 }

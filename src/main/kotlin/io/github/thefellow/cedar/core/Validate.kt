@@ -95,9 +95,12 @@ class ValidationCache {
 
     @Synchronized
     fun associateSchemaWithDoc(schemaDoc: TextDocument, doc: TextDocument) {
-        val s = docsBySchema[schemaDoc.uri.toString()] ?: LinkedHashSet()
-        s.add(doc.uri.toString())
-        docsBySchema[schemaDoc.uri.toString()] = s
+        // DIVERGENCE (semport/DIVERGENCES.md#multiple-schema-files): a change to any part re-validates the doc
+        for (schema in (listOf(schemaDoc) + schemaParts(schemaDoc)).distinct()) {
+            val s = docsBySchema[schema.uri.toString()] ?: LinkedHashSet()
+            s.add(doc.uri.toString())
+            docsBySchema[schema.uri.toString()] = s
+        }
     }
 
     /** Drops cached results of documents validated with [schemaDoc]; returns their uris to re-validate. */
@@ -147,6 +150,7 @@ val validationCache = ValidationCache()
 
 fun clearValidationCache() {
     validationCache.clear()
+    clearCombinedSchemaCache() // DIVERGENCE (semport/DIVERGENCES.md#multiple-schema-files)
 }
 
 fun narrowEntityTypes(
@@ -259,6 +263,10 @@ fun validateSchemaDoc(
     diagnosticCollection: DiagnosticCollection,
     userInitiated: Boolean = false,
 ): Boolean {
+    // DIVERGENCE (semport/DIVERGENCES.md#multiple-schema-files)
+    if (schemaDoc is CombinedSchemaDocument) {
+        return validateCombinedSchemaDoc(workspace, schemaDoc, diagnosticCollection, userInitiated)
+    }
     if (!userInitiated) {
         val cachedItem = validationCache.check(schemaDoc)
         if (cachedItem != null) {
@@ -269,7 +277,8 @@ fun validateSchemaDoc(
     // console.log(`validateSchemaDoc ${schemaDoc.uri.toString()}`);
 
     val schema = schemaDoc.getText()
-    val schemaResult: ValidateSchemaResult = if (schemaDoc.languageId == "cedarschema") {
+    // DIVERGENCE (semport/DIVERGENCES.md#multiple-schema-files): one file of several is validated as a fragment
+    val schemaResult: ValidateSchemaResult = schemaPartResult(workspace, schemaDoc) ?: if (schemaDoc.languageId == "cedarschema") {
         Cedar.validateSchemaCedar(schema)
     } else {
         Cedar.validateSchemaJSON(schema)

@@ -3,6 +3,13 @@
 Versions follow upstream [vscode-cedar](https://github.com/cedar-policy/vscode-cedar/blob/main/CHANGELOG.md).
 A fourth version component (e.g. `0.10.6.1`) marks plugin-only releases on top of an upstream version.
 
+## 0.10.6.4 - 2026-11-04
+
+- Cedar schema files (`.cedarschema`) now fold: every multi-line `{...}` and `[...]` block can be collapsed
+- Settings take a list of schema files and folders (relative to the project root, or absolute) instead of a single schema file. When they resolve to more than one schema, every policy and entities file is validated against all of them combined, and completion, go to definition and the code lens use every schema
+- A schema file may use types declared in another configured schema file. A namespace (or an unqualified declaration) may only be declared once: a second declaration is reported as "already declared" in the file that repeats it
+- The existing single schema file setting is migrated to the new list automatically
+
 ## 0.10.6.3 - 2026-10-19
 
 - Opening files and navigating to symbols no longer uses deprecated or override-only IntelliJ Platform API

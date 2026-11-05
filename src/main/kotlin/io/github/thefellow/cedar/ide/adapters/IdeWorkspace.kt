@@ -25,6 +25,7 @@ class IdeWorkspace(private val project: Project) : Workspace {
     private val settings get() = CedarSettings.getInstance(project)
 
     override val schemaFile: String get() = settings.schemaFile
+    override val schemaFiles: List<String> get() = settings.schemaFiles
     override val autodetectSchemaFile: Boolean get() = settings.autodetectSchemaFile
 
     override val jsonIndentSize: Int

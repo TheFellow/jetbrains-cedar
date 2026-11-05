@@ -13,6 +13,7 @@ mod entities_validator;
 mod format;
 mod policy;
 mod policy_validator;
+mod schema_fragment;
 mod schema_translate;
 mod schema_validator;
 mod syntax_validator;
@@ -81,6 +82,12 @@ pub fn dispatch(request: &str) -> Result<Value, String> {
             to_json(schema_translate::translate_schema_from_json(arg_str(a, 0)?))
         }
         "translateSchemaToJSON" => to_json(schema_translate::translate_schema_to_json(arg_str(a, 0)?)),
+        // DIVERGENCE (semport/DIVERGENCES.md#multiple-schema-files)
+        "validateSchemaFragmentCedar" => to_json(schema_fragment::validate_schema_fragment_cedar(arg_str(a, 0)?)),
+        "validateSchemaFragmentJSON" => to_json(schema_fragment::validate_schema_fragment_json(arg_str(a, 0)?)),
+        "translateSchemaFragmentToJSON" => {
+            to_json(schema_fragment::translate_schema_fragment_to_json(arg_str(a, 0)?))
+        }
         other => Err(format!("unknown function: {other}")),
     }
 }

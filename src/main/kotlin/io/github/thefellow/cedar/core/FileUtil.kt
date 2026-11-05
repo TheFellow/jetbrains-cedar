@@ -63,7 +63,7 @@ fun detectEntitiesDoc(doc: TextDocument): Boolean {
     return result
 }
 
-private fun findSchemaFilesInFolder(workspace: Workspace, filepath: String): List<String> {
+internal fun findSchemaFilesInFolder(workspace: Workspace, filepath: String): List<String> {
     val schemaFiles = LinkedHashSet<String>()
     val files = workspace.readDirectory(Uri.file(filepath))
 
@@ -124,7 +124,29 @@ fun getSchemaUri(workspace: Workspace, doc: TextDocument? = null): Uri? {
     return fileUri
 }
 
+// DIVERGENCE (semport/DIVERGENCES.md#multiple-schema-files): every schema the document is validated with.
+// Upstream's getSchemaUri unless the setting lists several schema files, a folder, or an absolute path.
+fun getSchemaUris(workspace: Workspace, doc: TextDocument? = null): List<Uri> =
+    if (usesSchemaList(workspace)) configuredSchemaUris(workspace) else listOfNotNull(getSchemaUri(workspace, doc))
+
 fun getSchemaTextDocument(workspace: Workspace, doc: TextDocument? = null): TextDocument? {
+    // DIVERGENCE (semport/DIVERGENCES.md#multiple-schema-files): several schemas combine into one document
+    if (usesSchemaList(workspace)) {
+        val parts = configuredSchemaUris(workspace).mapNotNull { fileUri ->
+            try {
+                workspace.openTextDocument(fileUri) ?: throw IllegalStateException("not found")
+            } catch (_: Exception) {
+                workspace.showErrorMessage("Missing cedar.schemaFile: $fileUri")
+                null
+            }
+        }
+        return when (parts.size) {
+            0 -> null
+            1 -> parts[0]
+            else -> combineSchemaDocuments(parts)
+        }
+    }
+
     var schemaDoc: TextDocument? = null
     val fileUri = getSchemaUri(workspace, doc)
     if (fileUri != null) {

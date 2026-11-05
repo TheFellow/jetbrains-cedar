@@ -16,6 +16,10 @@ private fun findSchemaDefinition(
     referencedTypes: List<ReferencedRange>,
     actionIds: List<ReferencedRange> = emptyList(),
 ): Location? {
+    // DIVERGENCE (semport/DIVERGENCES.md#multiple-schema-files): find definitions in the real files
+    if (schemaDoc is CombinedSchemaDocument) {
+        return schemaDoc.parts.firstNotNullOfOrNull { findSchemaDefinition(it, position, referencedTypes, actionIds) }
+    }
     // TODO: update from O(n^2) to something more efficient
     val schemaItem = parseCedarSchemaDoc(schemaDoc)
     val schemaDefinitionRanges = schemaItem.definitionRanges

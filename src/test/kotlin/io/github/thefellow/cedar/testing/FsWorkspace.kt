@@ -12,7 +12,10 @@ class FsWorkspace(
     root: File? = null,
     override val schemaFile: String = "",
     override val autodetectSchemaFile: Boolean = true,
+    schemaFiles: List<String>? = null,
 ) : Workspace {
+    override val schemaFiles: List<String> = schemaFiles ?: listOf(schemaFile).filter { it.isNotEmpty() }
+
     val errors = mutableListOf<String>()
     val infos = mutableListOf<String>()
 
