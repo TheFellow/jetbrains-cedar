@@ -40,6 +40,7 @@ mise install
 ./gradlew test                  # Kotlin unit + IntelliJ platform tests (builds the wasm first)
 ./gradlew buildPlugin           # build/distributions/jetbrains-cedar-<version>.zip
 ./gradlew runIde                # sandboxed IDE (GoLand by default) with the plugin
+./gradlew runLocalIde           # same, in the installed IDE (platformLocalPath), e.g. a newer release
 scripts/semport_validate.sh     # the full validation contract used by semports
 semport/differential/run.sh     # upstream TS vs Kotlin output comparison (parser.ts, generate.ts)
 ```

@@ -3,6 +3,11 @@
 Versions follow upstream [vscode-cedar](https://github.com/cedar-policy/vscode-cedar/blob/main/CHANGELOG.md).
 A fourth version component (e.g. `0.10.6.1`) marks plugin-only releases on top of an upstream version.
 
+## 0.10.6.5 - 2026-11-05
+
+- Opening files and navigating to symbols no longer uses IntelliJ Platform API deprecated in 2026.3
+- Verified against GoLand and IntelliJ IDEA 2026.2 and 2026.3
+
 ## 0.10.6.4 - 2026-11-04
 
 - Cedar schema files (`.cedarschema`) now fold: every multi-line `{...}` and `[...]` block can be collapsed

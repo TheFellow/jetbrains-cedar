@@ -10,7 +10,6 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.WriteAction
 import com.intellij.openapi.fileChooser.FileChooserFactory
 import com.intellij.openapi.fileChooser.FileSaverDescriptor
-import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
@@ -18,6 +17,7 @@ import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.util.OpenSourceUtil
 import io.github.thefellow.cedar.core.SchemaExportType
 import io.github.thefellow.cedar.core.exportCedarDocPolicyById
 import io.github.thefellow.cedar.core.generateDiagram
@@ -41,7 +41,7 @@ internal fun writeLocalFile(path: String, text: String): VirtualFile? = WriteAct
 }
 
 internal fun openFile(project: Project, file: VirtualFile) {
-    FileEditorManager.getInstance(project).openTextEditor(OpenFileDescriptor(project, file), true)
+    OpenSourceUtil.navigate(true, OpenFileDescriptor(project, file))
 }
 
 /** cedar.export: `resourceScheme == file && editorLangId == cedar` */

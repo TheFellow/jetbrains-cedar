@@ -96,9 +96,10 @@ Install **Cedar** from the [JetBrains Marketplace](https://plugins.jetbrains.com
    This produces `build/distributions/jetbrains-cedar-<version>.zip`.
 2. In GoLand: **Settings | Plugins | ⚙ | Install Plugin from Disk…**, pick the zip, and restart the IDE.
 
-To try it without touching your IDE installation, `./gradlew runIde` opens a sandboxed GoLand with the plugin.
-Builds compile against `/Applications/GoLand.app` when present (see `gradle.properties`), otherwise they
-download GoLand `2026.2.3`.
+To try it without touching your IDE installation, `./gradlew runIde` opens a sandboxed GoLand `2026.2.3` with the
+plugin, and `./gradlew runLocalIde` a sandbox of the installed `/Applications/GoLand.app` (see `gradle.properties`).
+Builds always compile against the oldest supported release (`platformVersion`, GoLand `2026.2.3`), since bytecode
+compiled against a newer one may not link on older IDEs.
 
 ## Differences from the VS Code extension
 
@@ -119,7 +120,8 @@ download GoLand `2026.2.3`.
 
 Versions track upstream (`0.10.6` = vscode-cedar 0.10.6); plugin-only releases add a fourth component
 (`0.10.6.1`). Check Marketplace compatibility locally with `./gradlew verifyPlugin -PverifyLocalOnly`
-(against the installed GoLand) or `./gradlew verifyPlugin` (downloads GoLand and IntelliJ IDEA).
+(against the installed GoLand) or `./gradlew verifyPlugin` (downloads GoLand and IntelliJ IDEA `2026.2.3` and the
+newer releases in `platformVerifyVersions`).
 
 ## Development
 

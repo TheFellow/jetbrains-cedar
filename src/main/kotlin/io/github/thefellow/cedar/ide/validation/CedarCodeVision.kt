@@ -9,10 +9,10 @@ import com.intellij.codeInsight.codeVision.CodeVisionRelativeOrdering
 import com.intellij.codeInsight.codeVision.ui.model.ClickableTextCodeVisionEntry
 import com.intellij.codeInsight.hints.codeVision.DaemonBoundCodeVisionProvider
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiFile
+import com.intellij.util.OpenSourceUtil
 import io.github.thefellow.cedar.core.ValidateWithSchemaCodeLensProvider
 import io.github.thefellow.cedar.core.isCedarEntitiesFile
 import io.github.thefellow.cedar.ide.adapters.IdeTextDocument
@@ -46,9 +46,8 @@ class CedarSchemaCodeVisionProvider : DaemonBoundCodeVisionProvider {
                 { _, clickedEditor ->
                     val project = clickedEditor.project ?: return@ClickableTextCodeVisionEntry
                     // several when schemas are combined (semport/DIVERGENCES.md#multiple-schema-files)
-                    for (schemaFile in schemaUris.mapNotNull { virtualFileOf(it) }) {
-                        FileEditorManager.getInstance(project).openTextEditor(OpenFileDescriptor(project, schemaFile), true)
-                    }
+                    val schemaFiles = schemaUris.mapNotNull { virtualFileOf(it) }
+                    OpenSourceUtil.navigate(true, *schemaFiles.map { OpenFileDescriptor(project, it) }.toTypedArray())
                 },
                 null,
                 command.title,

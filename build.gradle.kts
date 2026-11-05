@@ -9,7 +9,7 @@ plugins {
 group = providers.gradleProperty("pluginGroup").get()
 version = providers.gradleProperty("pluginVersion").get()
 
-// IntelliJ Platform 2026.2 runs on Java 25.
+// IntelliJ Platform 2026.2+ runs on Java 25.
 kotlin { jvmToolchain(25) }
 
 repositories {
@@ -28,15 +28,10 @@ dependencies {
     testImplementation("org.opentest4j:opentest4j:1.3.0")
 
     intellijPlatform {
-        val localPath = providers.gradleProperty("platformLocalPath").orNull
-        if (localPath != null && file(localPath).exists()) {
-            local(localPath)
-        } else {
-            create(
-                providers.gradleProperty("platformType"),
-                providers.gradleProperty("platformVersion"),
-            )
-        }
+        create(
+            providers.gradleProperty("platformType"),
+            providers.gradleProperty("platformVersion"),
+        )
         bundledPlugins("com.intellij.modules.json", "org.intellij.plugins.markdown")
         testFramework(TestFrameworkType.Platform)
     }
@@ -70,18 +65,19 @@ intellijPlatform {
         token = providers.environmentVariable("PUBLISH_TOKEN")
     }
 
-    // Plugin Verifier: the local IDE when present (fast, offline), plus the released IDEs we claim to support.
+    // Plugin Verifier: the oldest and newer released IDEs we support, or just the local IDE with -PverifyLocalOnly.
     pluginVerification {
         ides {
             val localPath = providers.gradleProperty("platformLocalPath").orNull
             if (localPath != null && file(localPath).exists() && providers.gradleProperty("verifyLocalOnly").isPresent) {
                 local(localPath)
             } else {
-                create(
-                    providers.gradleProperty("platformType"),
-                    providers.gradleProperty("platformVersion"),
-                )
-                create(org.jetbrains.intellij.platform.gradle.IntelliJPlatformType.IntellijIdea, providers.gradleProperty("platformVersion"))
+                val versions = listOf(providers.gradleProperty("platformVersion").get()) +
+                    providers.gradleProperty("platformVerifyVersions").get().split(',').map { it.trim() }.filter { it.isNotEmpty() }
+                for (version in versions) {
+                    create(providers.gradleProperty("platformType").get(), version)
+                    create(org.jetbrains.intellij.platform.gradle.IntelliJPlatformType.IntellijIdea, version)
+                }
             }
         }
     }
@@ -122,6 +118,15 @@ val pluginInfo = tasks.register<WriteProperties>("pluginInfo") {
 sourceSets.main {
     resources.srcDir(cedarWasm.map { layout.buildDirectory.dir("generated/cedar-wasm").get() })
     resources.srcDir(pluginInfo.map { layout.buildDirectory.dir("generated/plugin-info").get() })
+}
+
+// `runLocalIde`: the plugin in the installed IDE (platformLocalPath), e.g. a newer release than platformVersion.
+intellijPlatformTesting {
+    runIde {
+        register("runLocalIde") {
+            localPath = file(providers.gradleProperty("platformLocalPath").get())
+        }
+    }
 }
 
 tasks {

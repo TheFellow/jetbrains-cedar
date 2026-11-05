@@ -331,7 +331,7 @@ class CompletionProvidersTest {
         assertEquals(Position(3, 3), inserted!!.second)
         assertEquals(
             ",\n{\n  \"uid\": { \"type\": \"NS1::Group\", \"id\": \"\$1\" },\n  \"attrs\": {\n    \"name\": \"\$2\",\n    \"owners\": [\$3]\n  },\n  \"parents\": [\$4]\n}",
-            inserted!!.first.value,
+            inserted.first.value,
         )
     }
 }

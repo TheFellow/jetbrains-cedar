@@ -40,7 +40,7 @@ class ValidationSuiteTest {
     // error parsing schema: use of the reserved `__cedar` namespace
     assertEquals(1, result.errors?.size)
     if (result.errors != null) {
-      var e = result.errors!![0]
+      var e = result.errors[0]
       assertTrue(e.message.contains("use of the reserved `__cedar` namespace"))
       assertEquals(180, e.offset)
       assertEquals(7, e.length)
@@ -56,7 +56,7 @@ class ValidationSuiteTest {
     // error parsing schema: this uses a reserved schema keyword: `Set`
     assertEquals(1, result.errors?.size)
     if (result.errors != null) {
-      var e = result.errors!![0]
+      var e = result.errors[0]
       assertTrue(e.message.contains("this uses a reserved schema keyword: `Set`"))
       assertEquals(188, e.offset)
       assertEquals(3, e.length)
@@ -72,7 +72,7 @@ class ValidationSuiteTest {
     assertEquals(1, result.errors?.size)
 
     if (result.errors != null) {
-      var e = result.errors!![0]
+      var e = result.errors[0]
       assertTrue(e.message.startsWith("unexpected token `action`"))
       assertEquals(18, e.offset)
       assertEquals(6, e.length)
@@ -93,7 +93,7 @@ class ValidationSuiteTest {
 
     if (result.warnings != null) {
       // for policy `policy0`, policy is impossible: the policy expression evaluates to false for all valid requests
-      val e = result.warnings!![0]
+      val e = result.warnings[0]
       assertTrue(e.message.contains("policy is impossible:"))
     }
   }
@@ -110,15 +110,15 @@ class ValidationSuiteTest {
     assertEquals(false, result.success)
 
     if (result.errors != null) {
-      assertEquals(2, result.errors!!.size)
+      assertEquals(2, result.errors.size)
 
       // for policy `policy0`, unable to find an applicable action given the policy scope constraints
       // for policy `policy0`, unrecognized entity type `Tst`\ndid you mean `Test`?
       // for policy `policy0`, unrecognized action `Action::"doTst"`\ndid you mean `Action::"doTest"`?
 
-      var errorMsg = result.errors!![0].message
-      assertEquals(21, result.errors!![0].offset)
-      assertEquals(3, result.errors!![0].length)
+      var errorMsg = result.errors[0].message
+      assertEquals(21, result.errors[0].offset)
+      assertEquals(3, result.errors[0].length)
 
       var found = errorMsg.jsMatch(UNRECOGNIZED_REGEX)
       assertNotNull(found)
@@ -127,7 +127,7 @@ class ValidationSuiteTest {
         assertEquals("Test", found?.group("suggestion"))
       }
 
-      errorMsg = result.errors!![1].message
+      errorMsg = result.errors[1].message
       found = errorMsg.jsMatch(UNRECOGNIZED_REGEX)
       assertNotNull(found)
       if (found != null) {
@@ -146,7 +146,7 @@ class ValidationSuiteTest {
 
     if (result.errors != null) {
       // JSON Schema file could not be parsed: missing field `entityTypes` at line 2 column 9
-      var errorMsg = result.errors!![0].message
+      var errorMsg = result.errors[0].message
       var found = errorMsg.jsMatch(AT_LINE_SCHEMA_REGEX)
       assertNotNull(found)
       if (found != null) {
@@ -168,7 +168,7 @@ class ValidationSuiteTest {
 
     if (result.errors != null) {
       // failed to resolve types: Test, Test\n`Test` has not been declared as an entity type
-      var errorMsg = result.errors!![0].message
+      var errorMsg = result.errors[0].message
       var found = errorMsg.jsMatch(UNDECLARED_REGEX)
       assertNotNull(found)
       if (found != null) {
@@ -188,7 +188,7 @@ class ValidationSuiteTest {
 
     if (result.errors != null) {
       // failed to resolve types: Test, Test\n`Test` has not been declared as an entity type
-      var e = result.errors!![0]
+      var e = result.errors[0]
       var found = e.message.jsMatch(UNDECLARED_REGEX)
       assertNotNull(found)
       if (found != null) {
@@ -209,7 +209,7 @@ class ValidationSuiteTest {
 
     if (result.errors != null) {
       // undeclared actions: Action::"test1" and Action::"test2"\nany actions appearing as parents need to be declared as actions
-      var errorMsg = result.errors!![0].message
+      var errorMsg = result.errors[0].message
       var found = errorMsg.jsMatch(UNDECLARED_ACTION_REGEX)
       assertNotNull(found)
       if (found != null) {
@@ -235,7 +235,7 @@ class ValidationSuiteTest {
 
     if (result.errors != null) {
       // entity does not conform to the schema: expected entity `Test::"expected"` to have attribute `test`, but it does not
-      var errorMsg = result.errors!![0].message
+      var errorMsg = result.errors[0].message
       assertTrue(errorMsg.startsWith("entity does not conform to the schema: "))
       errorMsg = errorMsg.substring(errorMsg.indexOf(": ") + 2)
       assertEquals("expected entity `Test::\"expected\"` to have attribute `test`, but it does not", errorMsg)
@@ -263,7 +263,7 @@ class ValidationSuiteTest {
 
     if (result.errors != null) {
       // error during entity deserialization: in attribute `nested` on `Test::"expected"`, expected the record to have an attribute `test`, but it does not
-      var errorMsg = result.errors!![0].message
+      var errorMsg = result.errors[0].message
       assertTrue(errorMsg.startsWith("error during entity deserialization: "))
       errorMsg = errorMsg.substring(errorMsg.indexOf(": ") + 2)
       assertEquals("in attribute `nested` on `Test::\"expected\"`, expected the record to have an attribute `test`, but it does not", errorMsg)
@@ -292,7 +292,7 @@ class ValidationSuiteTest {
 
     if (result.errors != null) {
       // entity does not conform to the schema: in attribute `test` on `Test::"mismatch"`, type mismatch: value was expected to have type string, but it actually has type long: `1`
-      var errorMsg = result.errors!![0].message
+      var errorMsg = result.errors[0].message
       assertTrue(errorMsg.startsWith("entity does not conform to the schema: "))
       errorMsg = errorMsg.substring(errorMsg.indexOf(": ") + 2)
       assertEquals("in attribute `test` on `Test::\"mismatch\"`, type mismatch: value was expected to have type string, but it actually has type long: `1`", errorMsg)
@@ -320,7 +320,7 @@ class ValidationSuiteTest {
 
     if (result.errors != null) {
       // entity does not conform to the schema: in attribute `self` on `Test::"mismatchentity"`, type mismatch: value was expected to have type `Test`, but it actually has type (entity of type `Tst`): `Tst::"mismatchtype"`
-      var errorMsg = result.errors!![0].message
+      var errorMsg = result.errors[0].message
       assertTrue(errorMsg.startsWith("entity does not conform to the schema: "))
       errorMsg = errorMsg.substring(errorMsg.indexOf(": ") + 2)
       assertEquals("in attribute `self` on `Test::\"mismatchentity\"`, type mismatch: value was expected to have type `Test`, but it actually has type (entity of type `Tst`): `Tst::\"mismatchtype\"`", errorMsg)
@@ -345,7 +345,7 @@ class ValidationSuiteTest {
 
     if (result.errors != null) {
       // error during entity deserialization: attribute `tst` on `Test::"exist"` should not exist according to the schema
-      var errorMsg = result.errors!![0].message
+      var errorMsg = result.errors[0].message
       assertTrue(errorMsg.startsWith("error during entity deserialization: "))
       errorMsg = errorMsg.substring(errorMsg.indexOf(": ") + 2)
       assertEquals("attribute `tst` on `Test::\"exist\"` should not exist according to the schema", errorMsg)
@@ -373,7 +373,7 @@ class ValidationSuiteTest {
 
     if (result.errors != null) {
       // error during entity deserialization: entity `Employee::"12UA45"` has type `Employee` which is not declared in the schema`?
-      var errorMsg = result.errors!![0].message
+      var errorMsg = result.errors[0].message
       assertTrue(errorMsg.startsWith("error during entity deserialization: "))
       errorMsg = errorMsg.substring(errorMsg.indexOf(": ") + 2)
       assertEquals("entity `Employee::\"12UA45\"` has type `Employee` which is not declared in the schema", errorMsg)
@@ -400,7 +400,7 @@ class ValidationSuiteTest {
 
     if (result.errors != null) {
       // entity does not conform to the schema: `XYZCorp::Employee::"12UA45"` is not allowed to have an ancestor of type `XYZCorp::Employee` according to the schema
-      var errorMsg = result.errors!![0].message
+      var errorMsg = result.errors[0].message
       assertTrue(errorMsg.startsWith("entity does not conform to the schema: "))
       errorMsg = errorMsg.substring(errorMsg.indexOf(": ") + 2)
       assertEquals("`XYZCorp::Employee::\"12UA45\"` is not allowed to have an ancestor of type `XYZCorp::Employee` according to the schema", errorMsg)

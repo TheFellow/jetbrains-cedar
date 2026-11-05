@@ -149,8 +149,8 @@ class CedarWasmSuiteTest {
     assertNotNull(result.errors)
     assertEquals(1, result.errors?.size)
     if (result.errors != null) {
-      var errorOffset = result.errors!![0].offset
-      var errorLength = result.errors!![0].length
+      var errorOffset = result.errors[0].offset
+      var errorLength = result.errors[0].length
       assertEquals(18, errorOffset)
       assertEquals(6, errorLength)
     }
