@@ -101,7 +101,9 @@ class TmLexer(grammar: TmGrammar, private val types: TmTokenTypes) : LexerBase()
         index = 0
     }
 
-    override fun getState() = if (index < restartable.size && restartable[index]) 0 else 1
+    // LexerEditorHighlighter takes getState() after start("") as the restartable state, so the end of input
+    // (and with it the empty buffer) must report 0, or every non-line-start token becomes a restart point.
+    override fun getState() = if (index >= restartable.size || restartable[index]) 0 else 1
 
     override fun getTokenType(): IElementType? {
         if (index >= tokens.size) return null
