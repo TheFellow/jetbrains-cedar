@@ -6,7 +6,7 @@ entity User in [Group, Team] {
 };
 entity Group, Team;
 type T = {x: Long};
-action "a", b, "c d" in ["x", NS::Action::"y"] appliesTo {
+action "a", b, "c d" in [x, NS::Action::"y"] appliesTo {
   principal: [User],
   resource: User,
 };

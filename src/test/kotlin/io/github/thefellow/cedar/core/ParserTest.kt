@@ -151,4 +151,43 @@ class ParserTest {
         assertEquals(listOf("Acme::Organization"), result.referencedTypes.map { it.name })
         assertEquals(Range(7, 20, 7, 32), result.referencedTypes.single().range)
     }
+
+    // Deliberate divergence from upstream: semport/DIVERGENCES.md#schema-action-lists
+    @Test
+    fun schemaCedarActionListsSpanLinesAndAcceptQuotedIds() {
+        val src = """
+            namespace Acme {
+                entity User in [
+                    Group,
+                    Team
+                ];
+                action read in [
+                    Acme::Action::"list", Acme::Action::"view",
+                    other
+                ] appliesTo {
+                    principal: [
+                        User
+                    ],
+                    resource: Doc,
+                };
+                action write in ["read"];
+            }
+        """.trimIndent()
+        val result = parseCedarSchemaDoc(text(src, "lists.cedarschema", "cedarschema"))
+        val lines = src.lines()
+        fun Range.text() = lines[start.line].substring(start.character, end.character)
+        assertEquals(
+            listOf("User", "Group", "Team", "read", "Acme::Action", "Acme::Action", "other", "User", "Doc", "write", "\"read\""),
+            result.tokens.tokens.map { it.range.text() },
+        )
+        assertEquals(
+            listOf("Acme::Group", "Acme::Team", "Acme::User", "Acme::Doc"),
+            result.referencedTypes.map { it.name },
+        )
+        assertEquals(
+            listOf("Acme::Action::\"list\"", "Acme::Action::\"view\"", "Acme::Action::\"other\"", "Acme::Action::\"read\""),
+            result.actionIds.map { it.name },
+        )
+        assertEquals(listOf("\"list\"", "\"view\"", "other", "\"read\""), result.actionIds.map { it.range.text() })
+    }
 }

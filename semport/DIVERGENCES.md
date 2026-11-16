@@ -29,6 +29,40 @@ as the start of a comment.
 The port replaces the contents of each `@name("...")` value with the same number of spaces before scanning the
 line, so offsets are unchanged and nothing inside an annotation value is tokenized or referenced.
 
+## schema-action-lists
+
+**Upstream:** `src/parser.ts`, `parseCedarSchemaCedarDoc` (`BRACKET_LIST_REGEX` scan and
+`parseCedarSchemaActionItem`), as of `e592133`.
+**Port:** `core/Parser.kt`, `openList` / `parseCedarSchemaListItems` / `SchemaListKind` in
+`parseCedarSchemaCedarDoc`, and the quoted-id branch of `parseCedarSchemaActionItem`.
+**Test:** `ParserTest.schemaCedarActionListsSpanLinesAndAcceptQuotedIds`.
+
+Upstream scans a `.cedarschema` file line by line and only recognizes a `[...]` list that opens and closes on the
+same line. A list broken across lines, such as
+
+```
+action read in [
+    Acme::Action::"list",
+    Acme::Action::"view"
+] appliesTo { principal: [
+    User
+], ... };
+```
+
+gets no semantic tokens, referenced types or action references for its items, so they lose the type/string
+coloring and go to definition. The port remembers a `[` still open at the end of a line and scans the items that
+follow, on that line and the next ones, up to the closing `]` (or a `;`, for an unterminated list). Those items
+are then blanked out so the rest of the closing line (`] appliesTo {`, `];`) is scanned as before. A list after
+`in` in an action declaration holds action ids; one after `enum` holds string values and is skipped; any other
+holds entity types. Lists that fit on one line are scanned exactly as upstream does.
+
+Upstream also mishandles an unqualified quoted action id in a list (`action write in ["read"];`): it runs the
+entity regex over `"read"`, so `read` gets a `type` token (type color inside the string quotes) and the
+reference is named `"read"`, which go to definition can't resolve. The port treats it like an unquoted id: a
+`string` token over `"read"` and a reference to `<namespace>Action::"read"`.
+
+`semport/differential/fixtures/multi.cedarschema` uses an unquoted id (`in [x, ...]`) to stay off the second case.
+
 ## schema-folding
 
 **Upstream:** `src/extension.ts`, `registerFoldingRangeProvider` (registered for `{ language: 'cedar' }` only),

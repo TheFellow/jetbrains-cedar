@@ -1335,6 +1335,13 @@ private val ACTION_DECL_REGEX =
     Regex("""^action\s+((?:"[^"]*"|[_a-zA-Z][_a-zA-Z0-9]*)(?:\s*,\s*(?:"[^"]*"|[_a-zA-Z][_a-zA-Z0-9]*))*)\s*(?= in | appliesTo|;|$)""")
 private val BRACKET_LIST_REGEX = Regex("""\[([_a-zA-Z0-9:, "]+)\]""")
 private val IN_REGEX = Regex(""" in\s+(([_a-zA-Z][_a-zA-Z0-9]*::)*[_a-zA-Z][_a-zA-Z0-9]*)""")
+
+// DIVERGENCE (semport/DIVERGENCES.md#schema-action-lists): what a `[...]` spanning lines holds
+private enum class SchemaListKind { ACTIONS, TYPES, ENUM }
+private val LIST_AFTER_IN_REGEX = Regex("""\bin\s*$""")
+private val LIST_AFTER_ENUM_REGEX = Regex("""\benum\s*$""")
+private val ACTION_LIST_ITEM_REGEX =
+    Regex("""(?:([_a-zA-Z][_a-zA-Z0-9]*::)*"[^"]*"|[_a-zA-Z][_a-zA-Z0-9]*)""")
 private val ATTRIBUTE_DECL_REGEX =
     Regex("""^\s*(?:("[^"]+"|[_a-zA-Z][_a-zA-Z0-9]*))[?]?\s*:\s*(?:Set\s*<\s*)?(?<type>([_a-zA-Z][_a-zA-Z0-9]*::)*[_a-zA-Z][_a-zA-Z0-9]*)\s*(?:\s*>\s*)?""")
 
@@ -1401,7 +1408,19 @@ private fun parseCedarSchemaCedarDoc(
     fun parseCedarSchemaActionItem(item: String, line: Int, offset: Int) {
         val trimmed = item.trim()
         val quotePosition = item.indexOf('"')
-        if (quotePosition > -1) {
+        if (trimmed.startsWith("\"")) {
+            // DIVERGENCE (semport/DIVERGENCES.md#schema-action-lists): upstream runs ENTITY_REGEXG over an
+            // unqualified quoted id like `"read"`, so `read` gets a `type` token and the reference is named `"read"`.
+            // It is an id in the current namespace's Action type, like an unquoted one.
+            val range = makeRange(line, offset + quotePosition, trimmed.length)
+            tokensBuilder.push(range, "string", emptyList())
+            actionIds.add(
+                ReferencedRange(
+                    name = "${namespace}Action::$trimmed",
+                    range = range,
+                ),
+            )
+        } else if (quotePosition > -1) {
             val foundArray = ENTITY_REGEXG.findAll(item).toList()
             foundArray.forEach { found ->
                 val type = found.group("type") ?: return@forEach
@@ -1426,10 +1445,45 @@ private fun parseCedarSchemaCedarDoc(
         }
     }
 
+    // DIVERGENCE (semport/DIVERGENCES.md#schema-action-lists): upstream only scans `[...]` lists that close on the
+    // line they open on. Track a list left open at the end of a line and scan its items on the following lines.
+    var openList: SchemaListKind? = null
+
+    fun parseCedarSchemaListItems(text: String, start: Int, end: Int, line: Int, kind: SchemaListKind) {
+        if (kind == SchemaListKind.ENUM) return
+        var offset = start
+        text.substring(start, end).split(',').forEach { item ->
+            val trimmed = item.trim()
+            val itemOffset = offset + item.indexOf(trimmed)
+            if (kind == SchemaListKind.ACTIONS && trimmed.matches(ACTION_LIST_ITEM_REGEX)) {
+                parseCedarSchemaActionItem(trimmed, line, itemOffset)
+            } else if (kind == SchemaListKind.TYPES && trimmed.matches(PATH_REGEX)) {
+                parseCedarSchemaEntityItem(trimmed, line, itemOffset)
+            }
+            offset += item.length + 1
+        }
+    }
+
     var declarationStartLine = -1
     for (i in 0 until schemaDoc.lineCount) {
-        val textLine = maskAnnotationValues(schemaDoc.lineAt(i).text)
-        val commentPos = textLine.indexOf("//")
+        var textLine = maskAnnotationValues(schemaDoc.lineAt(i).text)
+        var commentPos = textLine.indexOf("//")
+        val list = openList
+        if (list != null) {
+            // DIVERGENCE (semport/DIVERGENCES.md#schema-action-lists): scan the items up to the closing `]` (or a
+            // `;`, for an unterminated list), then blank them out so the rest of the line is scanned as usual.
+            val pre = textLine.substring(0, if (commentPos > -1) commentPos else textLine.length)
+            var close = pre.indexOfAny(charArrayOf(']', ';'))
+            parseCedarSchemaListItems(pre, 0, if (close > -1) close else pre.length, i, list)
+            if (close > -1) {
+                openList = null
+                if (pre[close] == ']') close++
+            } else {
+                close = pre.length
+            }
+            textLine = " ".repeat(close) + textLine.substring(close)
+            commentPos = textLine.indexOf("//")
+        }
         var linePreComment = textLine
             .substring(0, if (commentPos > -1) commentPos else textLine.length)
             .trim()
@@ -1538,6 +1592,20 @@ private fun parseCedarSchemaCedarDoc(
                         }
                     }
                 }
+            }
+            // DIVERGENCE (semport/DIVERGENCES.md#schema-action-lists): a `[` still open at the end of the line
+            val pre = textLine.substring(0, if (commentPos > -1) commentPos else textLine.length)
+            val lastOpen = pre.lastIndexOf('[')
+            if (lastOpen > pre.lastIndexOf(']') && !pre.substring(lastOpen).contains(';')) {
+                val before = pre.substring(0, lastOpen)
+                val kind = when {
+                    before.contains(LIST_AFTER_ENUM_REGEX) -> SchemaListKind.ENUM
+                    collection == "actions" && declarationStartLine != -1 && before.contains(LIST_AFTER_IN_REGEX) ->
+                        SchemaListKind.ACTIONS
+                    else -> SchemaListKind.TYPES
+                }
+                parseCedarSchemaListItems(pre, lastOpen + 1, pre.length, i, kind)
+                openList = kind
             }
             val colonIndex = textLine.indexOf(':')
             if (declarationStartLine != -1 && colonIndex > -1) {

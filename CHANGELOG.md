@@ -3,6 +3,12 @@
 Versions follow upstream [vscode-cedar](https://github.com/cedar-policy/vscode-cedar/blob/main/CHANGELOG.md).
 A fourth version component (e.g. `0.10.6.1`) marks plugin-only releases on top of an upstream version.
 
+## 0.10.6.6 - 2026-11-16
+
+- Strings and other tokens keep their highlighting while editing: after some edits, the editor could re-highlight from the middle of a line, so the text inside a string such as `Acme::Action::"list"` lost its string color
+- Cedar schema lists split across lines (`action read in [`, `principal: [`, `entity User in [` ... `]`) are now recognized: their action ids and entity types are highlighted and support go to definition
+- An unqualified quoted action id in a schema list (`action write in ["read"];`) is highlighted as a string instead of showing the id in the type color, and go to definition finds the action
+
 ## 0.10.6.5 - 2026-11-05
 
 - Opening files and navigating to symbols no longer uses IntelliJ Platform API deprecated in 2026.3
